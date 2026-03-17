@@ -5,5 +5,5 @@ media/
 *web.log*
 *local_settings.py
 .env.local
-.env.pre_qa
+.env.staging
 orion/settings.py
