@@ -5,6 +5,8 @@ Real-time Chat with Emoji, Media, Docs & Subscription
 
 import os
 from pathlib import Path
+
+import dj_database_url
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -75,14 +77,9 @@ CHANNEL_LAYERS = {
 }
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT'),
-    }
+    "default": dj_database_url.parse(
+        os.environ.get("DATABASE_URL")
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = [
