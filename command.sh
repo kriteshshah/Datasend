@@ -7,4 +7,4 @@ set -e
 python manage.py migrate &&
 python manage.py collectstatic --noinput &&
 
-gunicorn chatproject.wsgi:application --bind 0.0.0.0:$PORT --timeout 600
+daphne -b 0.0.0.0 -p $PORT chatproject.asgi:application
