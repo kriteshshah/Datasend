@@ -64,18 +64,13 @@ TEMPLATES = [
 ASGI_APPLICATION = 'chatproject.asgi.application'
 
 CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [(os.getenv('REDIS_HOST', '127.0.0.1'), int(os.getenv('REDIS_PORT', 6379)))],
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.environ.get("REDIS_URL")],
         },
     },
-    # Fallback for dev without Redis:
-    # 'default': {
-    #     'BACKEND': 'channels.layers.InMemoryChannelLayer',
-    # },
 }
-
 DATABASES = {
     "default": dj_database_url.parse(
         os.environ.get("DATABASE_URL")
