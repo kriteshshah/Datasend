@@ -63,14 +63,35 @@ TEMPLATES = [
 # ASGI / Channels
 ASGI_APPLICATION = 'chatproject.asgi.application'
 
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [os.environ.get("REDIS_URL")],
+_REDIS_URL = os.getenv('REDIS_URL')  # e.g. redis://:pass@host:6379
+
+if _REDIS_URL:
+    # Render gives rediss:// (TLS) or redis://
+    # channels_redis accepts the full URL string directly as a host entry
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [_REDIS_URL],
+            },
         },
-    },
-}
+    }
+else:
+    # Local dev: use host + port separately
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [(os.getenv('REDIS_HOST', '127.0.0.1'), int(os.getenv('REDIS_PORT', 6379)))],
+            },
+        },
+        # ↓ Uncomment this block (and comment out the one above) to run
+        #   without Redis at all during local development:
+        # 'default': {
+        #     'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        # },
+    }
+
 DATABASES = {
     "default": dj_database_url.parse(
         os.environ.get("DATABASE_URL")

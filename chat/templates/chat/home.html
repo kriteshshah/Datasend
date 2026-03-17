@@ -208,8 +208,9 @@
 
 {% block extra_js %}
 <script>
-// Notification WebSocket
-const notifWS = new WebSocket(`ws://${window.location.host}/ws/notifications/`);
+// Notification WebSocket — auto-detect wss:// on HTTPS
+const WS_SCHEME = window.location.protocol === 'https:' ? 'wss' : 'ws';
+const notifWS = new WebSocket(`${WS_SCHEME}://${window.location.host}/ws/notifications/`);
 
 notifWS.onmessage = (e) => {
     const data = JSON.parse(e.data);

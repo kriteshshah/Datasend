@@ -495,10 +495,17 @@ let oldestMsgId = null;
 const firstMsg = document.querySelector('.msg-group');
 if (firstMsg) oldestMsgId = firstMsg.dataset.id;
 
+// Auto-detect ws:// vs wss:// based on page protocol
+const WS_SCHEME = window.location.protocol === 'https:' ? 'wss' : 'ws';
+
 function connectWS() {
-    socket = new WebSocket(`ws://${window.location.host}/ws/chat/${ROOM_ID}/`);
+    socket = new WebSocket(`${WS_SCHEME}://${window.location.host}/ws/chat/${ROOM_ID}/`);
     socket.onopen = () => console.log('WS connected');
-    socket.onclose = () => setTimeout(connectWS, 3000);
+    socket.onclose = (e) => {
+        console.warn('WS closed, reconnecting in 3s…', e.code);
+        socket = undefined;
+        setTimeout(connectWS, 3000);
+    };
     socket.onerror = (e) => console.error('WS error', e);
     socket.onmessage = handleWSMessage;
 }
@@ -506,7 +513,7 @@ connectWS();
 
 function handleWSMessage(e) {
     const data = JSON.parse(e.data);
-    
+
     switch(data.type) {
         case 'chat_message':
             appendMessage(data);
@@ -539,25 +546,25 @@ function handleWSMessage(e) {
 function sendMessage() {
     const input = document.getElementById('msg-input');
     const text = input.value.trim();
-    
+
     if (pendingFile) {
         uploadFile();
         return;
     }
-    
+
     if (!text) return;
-    
-    if (socket.readyState !== WebSocket.OPEN) {
-        showToast('Connection lost', 'Reconnecting...', 'error');
+
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        showToast('Reconnecting…', 'Please wait a moment and try again.', 'warning');
         return;
     }
-    
-    socket.send(JSON.stringify({
+
+    socketSend({
         action: 'send_message',
         text: text,
         reply_to: replyToId,
-    }));
-    
+    });
+
     input.value = '';
     input.style.height = 'auto';
     clearReply();
@@ -576,10 +583,10 @@ function handleTyping() {
     // Auto-resize
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-    
+
     if (!isTyping) {
         isTyping = true;
-        socket.send(JSON.stringify({action: 'typing', is_typing: true}));
+        socketSend({action: 'typing', is_typing: true});
     }
     clearTimeout(typingTimer);
     typingTimer = setTimeout(stopTyping, 2000);
@@ -588,9 +595,7 @@ function handleTyping() {
 function stopTyping() {
     if (isTyping) {
         isTyping = false;
-        if (socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({action: 'typing', is_typing: false}));
-        }
+        socketSend({action: 'typing', is_typing: false});
     }
 }
 
@@ -606,14 +611,14 @@ function getAvatarHTML(data, size='sm') {
 function appendMessage(data) {
     const isOwn = data.sender_id === MY_USER_ID;
     const wrap = document.getElementById('messages-wrap');
-    
+
     let replyHTML = '';
     if (data.reply_to) {
         replyHTML = `<div class="reply-quote"><div class="reply-sender">↩ ${data.reply_to.sender}</div><div class="reply-text">${data.reply_to.text}</div></div>`;
     }
-    
+
     const isEmoji = /^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\s]+$/u.test(data.text.trim());
-    
+
     const div = document.createElement('div');
     div.className = `msg-group ${isOwn ? 'own' : ''}`;
     div.id = `msg-${data.message_id}`;
@@ -642,7 +647,7 @@ function appendMessage(data) {
 function appendFileMessage(data) {
     const isOwn = data.sender_id === MY_USER_ID;
     const wrap = document.getElementById('messages-wrap');
-    
+
     let bubbleContent = '';
     if (data.message_type === 'image') {
         bubbleContent = `
@@ -666,7 +671,7 @@ function appendFileMessage(data) {
                 <a href="${data.file_url}" download class="doc-dl">⬇️</a>
             </div>`;
     }
-    
+
     const div = document.createElement('div');
     div.className = `msg-group ${isOwn ? 'own' : ''}`;
     div.id = `msg-${data.message_id}`;
@@ -685,18 +690,18 @@ function appendFileMessage(data) {
 function handleFileSelect(input) {
     const file = input.files[0];
     if (!file) return;
-    
+
     const MAX_SIZES = { 'image': 10, 'video': 100, 'doc': 25 };
     let type = 'doc';
     if (file.type.startsWith('image/')) type = 'image';
     else if (file.type.startsWith('video/')) type = 'video';
-    
+
     const maxMB = MAX_SIZES[type];
     if (file.size > maxMB * 1024 * 1024) {
         showToast('File too large', `Maximum size is ${maxMB}MB`, 'error');
         return;
     }
-    
+
     pendingFile = file;
     showFilePreview(file, type);
 }
@@ -705,10 +710,10 @@ function showFilePreview(file, type) {
     const bar = document.getElementById('file-preview-bar');
     document.getElementById('file-preview-name').textContent = file.name;
     document.getElementById('file-preview-size').textContent = formatSize(file.size);
-    
+
     const img = document.getElementById('file-preview-img');
     const icon = document.getElementById('file-preview-icon');
-    
+
     if (type === 'image') {
         img.style.display = 'block';
         icon.style.display = 'none';
@@ -730,17 +735,17 @@ function clearFile() {
 
 async function uploadFile() {
     if (!pendingFile) return;
-    
+
     const btn = document.getElementById('send-btn');
     btn.disabled = true;
     btn.textContent = '⏳';
-    
+
     const formData = new FormData();
     formData.append('file', pendingFile);
-    
+
     const caption = document.getElementById('msg-input').value.trim();
     if (caption) formData.append('caption', caption);
-    
+
     try {
         const res = await fetch(`/room/${ROOM_ID}/upload/`, {
             method: 'POST',
@@ -748,7 +753,7 @@ async function uploadFile() {
             body: formData,
         });
         const data = await res.json();
-        
+
         if (!res.ok) {
             if (data.error === 'quota_exceeded') {
                 document.getElementById('quota-modal').classList.add('active');
@@ -769,9 +774,7 @@ async function uploadFile() {
 
 // ─── Reactions ────────────────────────────────────────────────────────────────
 function sendReaction(msgId, emoji) {
-    if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({action: 'add_reaction', message_id: msgId, emoji}));
-    }
+    socketSend({action: 'add_reaction', message_id: msgId, emoji});
 }
 
 function updateReactions(data) {
@@ -784,7 +787,7 @@ function updateReactions(data) {
         bubbles.appendChild(div);
         return div;
     })();
-    
+
     if (!msgEl) return;
     msgEl.innerHTML = data.reactions.map(r => `
         <span class="reaction-chip" onclick="sendReaction('${data.message_id}','${r.emoji}')">
@@ -800,7 +803,7 @@ function showTyping(data) {
     } else {
         typingUsers.delete(data.user_id);
     }
-    
+
     const bar = document.getElementById('typing-bar');
     if (typingUsers.size === 0) {
         bar.innerHTML = '';
@@ -828,7 +831,7 @@ function handleMessageDeleted(data) {
 
 function deleteMessage(msgId) {
     if (confirm('Delete this message?')) {
-        socket.send(JSON.stringify({action: 'delete_message', message_id: msgId}));
+        socketSend({action: 'delete_message', message_id: msgId});
     }
 }
 
@@ -863,9 +866,7 @@ function scrollToBottom() {
 }
 
 function markRead() {
-    if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({action: 'mark_read'}));
-    }
+    socketSend({action: 'mark_read'});
 }
 
 function toggleMembers() {
@@ -891,24 +892,24 @@ let loadingMore = false;
 async function loadMoreMessages() {
     if (loadingMore || !oldestMsgId) return;
     loadingMore = true;
-    
+
     const res = await fetch(`/api/room/${ROOM_ID}/messages/?before=${oldestMsgId}`);
     const data = await res.json();
-    
+
     if (data.messages.length) {
         const wrap = document.getElementById('messages-wrap');
         const oldScrollHeight = wrap.scrollHeight;
-        
+
         data.messages.forEach(msg => {
             // Prepend messages
             const el = buildMessageEl(msg);
             const firstChild = wrap.querySelector('.msg-group') || wrap.querySelector('.load-more-btn').nextSibling;
             wrap.insertBefore(el, firstChild);
         });
-        
+
         oldestMsgId = data.messages[0].id;
         wrap.scrollTop = wrap.scrollHeight - oldScrollHeight;
-        
+
         if (!data.has_more) {
             document.getElementById('load-more-wrap').style.display = 'none';
         }
@@ -921,7 +922,7 @@ function buildMessageEl(msg) {
     div.className = `msg-group ${msg.is_own ? 'own' : ''}`;
     div.id = `msg-${msg.id}`;
     div.dataset.id = msg.id;
-    
+
     let content = '';
     if (msg.type === 'image') {
         content = `<div class="bubble image-bubble"><img src="${msg.file_url}" onclick="openLightbox('img','${msg.file_url}')" loading="lazy"><div class="msg-time">${msg.timestamp}</div></div>`;
@@ -932,7 +933,7 @@ function buildMessageEl(msg) {
     } else {
         content = `<div class="bubble"><div>${escapeHTML(msg.text)}</div><div class="msg-time">${msg.timestamp}</div></div>`;
     }
-    
+
     const avatar = `<div class="avatar av-purple sm">${msg.sender_initials}</div>`;
     div.innerHTML = `
         ${!msg.is_own ? avatar : ''}
@@ -967,8 +968,15 @@ if (document.querySelectorAll('.msg-group').length >= 50) {
     document.getElementById('load-more-wrap').style.display = 'block';
 }
 
-// Notification WS
-const notifWS = new WebSocket(`ws://${window.location.host}/ws/notifications/`);
+// Guard: only send if socket is open
+function socketSend(payload) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(payload));
+    }
+}
+
+// Notification WS — auto wss:// on HTTPS
+const notifWS = new WebSocket(`${WS_SCHEME}://${window.location.host}/ws/notifications/`);
 notifWS.onmessage = (e) => {
     const data = JSON.parse(e.data);
     if (data.type === 'notification' && data.room_id !== ROOM_ID) {
