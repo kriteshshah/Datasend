@@ -10,3 +10,4 @@ redis>=4.5.0
 python-dotenv>=1.0.0
 django-widget-tweaks>=1.4.12
 psycopg2-binary==2.9.11
+gunicorn==23.0.0
