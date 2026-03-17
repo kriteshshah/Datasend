@@ -1,0 +1,132 @@
+{% load chat_tags %}
+<div class="msg-group {% if message.sender == user %}own{% endif %}" 
+     id="msg-{{ message.id }}" 
+     data-id="{{ message.id }}">
+    
+    {% if message.sender != user %}
+    <div class="avatar {{ message.sender.username|avatar_color }} sm">
+        {% if message.sender.profile.avatar %}
+            <img src="{{ message.sender.profile.avatar.url }}" alt="{{ message.sender.username }}">
+        {% else %}
+            {{ message.sender.username|first|upper }}
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="msg-bubbles">
+        {% if message.sender != user %}
+        <div class="msg-sender">{{ message.sender.get_full_name|default:message.sender.username }}</div>
+        {% endif %}
+
+        {% if message.reply_to %}
+        <div class="reply-quote">
+            <div class="reply-sender">↩ {{ message.reply_to.sender.username }}</div>
+            <div class="reply-text">
+                {% if message.reply_to.message_type == 'image' %}📷 Photo
+                {% elif message.reply_to.message_type == 'video' %}🎥 Video
+                {% elif message.reply_to.message_type == 'doc' %}📎 {{ message.reply_to.file_name }}
+                {% else %}{{ message.reply_to.text|default:"(message)"|truncatechars:80 }}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if message.message_type == 'image' and message.image %}
+            <div class="bubble image-bubble">
+                <img src="{{ message.image.url }}" 
+                     alt="Photo" 
+                     onclick="openLightbox('img','{{ message.image.url }}')"
+                     loading="lazy">
+                {% if message.text %}<div class="img-caption">{{ message.text }}</div>{% endif %}
+                <div class="msg-time">
+                    {{ message.created_at|time:"H:i" }}
+                    {% if message.sender == user %}✓{% endif %}
+                </div>
+                <div class="msg-actions">
+                    {% for emoji in "👍❤️😂😮😢" %}
+                    <span class="action-emoji" onclick="sendReaction('{{ message.id }}','{{ emoji }}')">{{ emoji }}</span>
+                    {% endfor %}
+                    <span class="action-emoji" onclick="setReply('{{ message.id }}','{{ message.sender.username }}','📷 Photo')">↩</span>
+                </div>
+            </div>
+
+        {% elif message.message_type == 'video' and message.video %}
+            <div class="bubble video-bubble">
+                <video src="{{ message.video.url }}" 
+                       controls 
+                       preload="metadata"
+                       onclick="this.paused ? this.play() : this.pause()">
+                    Your browser does not support video.
+                </video>
+                {% if message.text %}<div style="padding:6px 10px 4px;font-size:13px;">{{ message.text }}</div>{% endif %}
+                <div class="msg-time" style="padding:0 10px 6px;">
+                    {{ message.created_at|time:"H:i" }}
+                    {% if message.sender == user %}✓{% endif %}
+                </div>
+                <div class="msg-actions">
+                    {% for emoji in "👍❤️😂😮😢" %}
+                    <span class="action-emoji" onclick="sendReaction('{{ message.id }}','{{ emoji }}')">{{ emoji }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+        {% elif message.message_type == 'doc' and message.document %}
+            <div class="bubble doc-bubble">
+                <div class="doc-icon-wrap">{{ message.get_doc_icon }}</div>
+                <div class="doc-info">
+                    <div class="doc-name" title="{{ message.file_name }}">{{ message.file_name|truncatechars:28 }}</div>
+                    <div class="doc-size">{{ message.file_size|format_file_size }}</div>
+                </div>
+                <a href="{{ message.document.url }}" download="{{ message.file_name }}" class="doc-dl" title="Download">⬇️</a>
+                <div class="msg-actions">
+                    {% for emoji in "👍❤️😂😮😢" %}
+                    <span class="action-emoji" onclick="sendReaction('{{ message.id }}','{{ emoji }}')">{{ emoji }}</span>
+                    {% endfor %}
+                </div>
+                <div class="msg-time" style="position:static;margin-top:8px;opacity:0.5;font-size:11px;">
+                    {{ message.created_at|time:"H:i" }}
+                </div>
+            </div>
+
+        {% else %}
+            <div class="bubble {% if message.message_type == 'emoji' %}emoji-only{% endif %}">
+                {% if message.is_deleted %}
+                    <em style="color:var(--text-muted);font-size:13px;">🚫 This message was deleted</em>
+                {% else %}
+                    {{ message.text }}
+                {% endif %}
+                <div class="msg-time">
+                    {{ message.created_at|time:"H:i" }}
+                    {% if message.sender == user %}✓{% endif %}
+                    {% if message.is_edited %}<span style="opacity:0.6;font-size:10px;"> (edited)</span>{% endif %}
+                </div>
+                {% if not message.is_deleted %}
+                <div class="msg-actions">
+                    {% for emoji in "👍❤️😂😮😢" %}
+                    <span class="action-emoji" onclick="sendReaction('{{ message.id }}','{{ emoji }}')">{{ emoji }}</span>
+                    {% endfor %}
+                    <span class="action-emoji" onclick="setReply('{{ message.id }}','{{ message.sender.username }}','{{ message.text|truncatechars:60|escapejs }}')">↩</span>
+                    {% if message.sender == user %}
+                    <span class="action-emoji" onclick="deleteMessage('{{ message.id }}')">🗑️</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% if message.reactions.exists %}
+        <div class="reactions" id="reactions-{{ message.id }}">
+            {% regroup message.reactions.all by emoji as reaction_groups %}
+            {% for group in reaction_groups %}
+            <span class="reaction-chip {% if user in group.list|dictsort:'user' %}mine{% endif %}"
+                  onclick="sendReaction('{{ message.id }}','{{ group.grouper }}')"
+                  title="{{ group.list|length }} reaction{% if group.list|length != 1 %}s{% endif %}">
+                {{ group.grouper }} {{ group.list|length }}
+            </span>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="reactions" id="reactions-{{ message.id }}"></div>
+        {% endif %}
+    </div>
+</div>

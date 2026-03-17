@@ -1,0 +1,9 @@
+.idea/
+*.pyc
+media/
+*api.log*
+*web.log*
+*local_settings.py
+.env.local
+.env.pre_qa
+orion/settings.py

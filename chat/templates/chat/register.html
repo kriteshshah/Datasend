@@ -1,0 +1,66 @@
+{% extends 'chat/base.html' %}
+{% block title %}Register — Spark Chat{% endblock %}
+{% block extra_css %}
+<style>
+.auth-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background: radial-gradient(ellipse at 20% 50%, rgba(108,99,255,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(34,211,160,0.08) 0%, transparent 50%); }
+.auth-card { width:100%; max-width:440px; padding:48px 40px; background:var(--surface); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow-lg); }
+.logo-icon { width:64px; height:64px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:28px; margin:0 auto 16px; box-shadow:0 0 40px var(--accent-glow); }
+.auth-card h1 { font-size:26px; font-weight:700; text-align:center; }
+.auth-card > p { color:var(--text-secondary); text-align:center; margin-top:6px; margin-bottom:28px; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.form-group label { display:block; font-size:13px; font-weight:500; color:var(--text-secondary); margin-bottom:7px; }
+.form-group { margin-bottom:16px; }
+.form-group.full { grid-column:1/-1; }
+.error-box { background:rgba(255,77,106,0.1); border:1px solid rgba(255,77,106,0.3); border-radius:var(--radius-sm); padding:12px 14px; color:var(--red); font-size:13px; margin-bottom:16px; }
+.auth-link { text-align:center; color:var(--text-secondary); font-size:13px; margin-top:20px; }
+.auth-link a { color:var(--accent); text-decoration:none; font-weight:500; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+    <div class="auth-card">
+        <div class="logo-icon" style="display:flex;margin:0 auto 16px;">⚡</div>
+        <h1>Create Account</h1>
+        <p>Join Spark Chat today — free</p>
+
+        {% if error %}
+        <div class="error-box">⚠️ {{ error }}</div>
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+            <div class="form-grid">
+                <div class="form-group full">
+                    <label>Full Name</label>
+                    <input type="text" name="full_name" placeholder="John Doe">
+                </div>
+                <div class="form-group full">
+                    <label>Username *</label>
+                    <input type="text" name="username" placeholder="cooluser123" required>
+                </div>
+                <div class="form-group full">
+                    <label>Email</label>
+                    <input type="email" name="email" placeholder="you@email.com">
+                </div>
+                <div class="form-group">
+                    <label>Password *</label>
+                    <input type="password" name="password" placeholder="••••••••" required>
+                </div>
+                <div class="form-group">
+                    <label>Confirm *</label>
+                    <input type="password" name="password2" placeholder="••••••••" required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px;padding:13px;">
+                Create Account ✨
+            </button>
+        </form>
+
+        <div class="auth-link" style="margin-top:20px;">
+            Already have an account? <a href="{% url 'login' %}">Sign in</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

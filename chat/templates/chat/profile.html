@@ -1,0 +1,297 @@
+{% extends 'chat/base.html' %}
+{% block title %}Profile — Spark Chat{% endblock %}
+{% block extra_css %}
+<style>
+.profile-page {
+    min-height: 100vh;
+    display: flex;
+    background: var(--bg-primary);
+}
+.profile-sidebar {
+    width: 260px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    padding: 32px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0;
+}
+.profile-avatar-wrap {
+    position: relative;
+    cursor: pointer;
+}
+.profile-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: 700;
+    color: #fff;
+    overflow: hidden;
+    border: 3px solid var(--border);
+    transition: border-color 0.2s;
+}
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-avatar-wrap:hover .profile-avatar { border-color: var(--accent); }
+.avatar-edit {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 28px;
+    height: 28px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    border: 2px solid var(--bg-secondary);
+}
+.profile-name { font-size: 18px; font-weight: 700; text-align: center; }
+.profile-username { font-size: 13px; color: var(--text-muted); }
+.plan-badge-large {
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+}
+.plan-badge-large.pro { background: linear-gradient(135deg,#ffd166,#f48c06); color: #000; }
+.plan-badge-large.free { background: var(--surface-2); color: var(--text-secondary); border: 1px solid var(--border); }
+.profile-nav { width: 100%; display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-secondary);
+    transition: all 0.15s;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    font-family: 'Sora', sans-serif;
+    text-decoration: none;
+}
+.nav-item:hover, .nav-item.active { background: var(--bg-hover); color: var(--text-primary); }
+.nav-item.active { border-left: 3px solid var(--accent); }
+
+/* Main content */
+.profile-main {
+    flex: 1;
+    padding: 40px;
+    overflow-y: auto;
+    max-width: 680px;
+}
+.section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+}
+.section-card h2 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 7px; font-weight: 500; }
+.alert-success {
+    background: rgba(34,211,160,0.12);
+    border: 1px solid rgba(34,211,160,0.3);
+    color: var(--green);
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+.alert-error {
+    background: rgba(255,77,106,0.12);
+    border: 1px solid rgba(255,77,106,0.3);
+    color: var(--red);
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.stat-box {
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+}
+.stat-box .num { font-size: 26px; font-weight: 800; color: var(--accent); }
+.stat-box .lbl { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+@media(max-width: 768px) {
+    .profile-sidebar { display: none; }
+    .profile-main { padding: 20px; }
+    .form-row { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+    <!-- Sidebar -->
+    <aside class="profile-sidebar">
+        <div class="profile-avatar-wrap" onclick="document.getElementById('avatar-input').click()">
+            <div class="profile-avatar">
+                {% if request.user.profile.avatar %}
+                    <img src="{{ request.user.profile.avatar.url }}" alt="Avatar">
+                {% else %}
+                    {{ request.user.username|first|upper }}
+                {% endif %}
+            </div>
+            <div class="avatar-edit">✏️</div>
+        </div>
+
+        <div>
+            <div class="profile-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+            <div class="profile-username">@{{ request.user.username }}</div>
+        </div>
+
+        {% if is_pro %}
+            <span class="plan-badge-large pro">⭐ Pro Plan</span>
+        {% else %}
+            <span class="plan-badge-large free">Free Plan</span>
+        {% endif %}
+
+        <div class="profile-nav">
+            <a href="{% url 'home' %}" class="nav-item">🏠 Home</a>
+            <a href="{% url 'profile' %}" class="nav-item active">👤 Profile</a>
+            <a href="{% url 'subscription' %}" class="nav-item">💎 Subscription</a>
+            <a href="{% url 'logout' %}" class="nav-item" style="color:var(--red)">🚪 Logout</a>
+        </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="profile-main">
+        <h1 style="font-size:26px; font-weight:800; margin-bottom:28px;">My Profile</h1>
+
+        {% if success %}
+        <div class="alert-success">✅ {{ success }}</div>
+        {% endif %}
+        {% if error %}
+        <div class="alert-error">⚠️ {{ error }}</div>
+        {% endif %}
+
+        <!-- Stats -->
+        <div class="section-card">
+            <h2>📊 Stats</h2>
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="num">{{ remaining }}</div>
+                    <div class="lbl">Messages left today</div>
+                </div>
+                <div class="stat-box">
+                    <div class="num">{{ request.user.sent_messages.count }}</div>
+                    <div class="lbl">Total messages sent</div>
+                </div>
+                <div class="stat-box">
+                    <div class="num">{{ request.user.chat_rooms.count }}</div>
+                    <div class="lbl">Conversations</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Profile -->
+        <div class="section-card">
+            <h2>✏️ Edit Profile</h2>
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_profile">
+                <input type="file" id="avatar-input" name="avatar" accept="image/*" style="display:none"
+                       onchange="previewAvatar(this)">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" name="full_name"
+                               value="{{ request.user.get_full_name }}"
+                               placeholder="Your full name">
+                    </div>
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" value="{{ request.user.username }}" disabled
+                               style="opacity:0.5;cursor:not-allowed;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" value="{{ request.user.email }}"
+                           placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label>Bio</label>
+                    <textarea name="bio" placeholder="Tell people about yourself..." rows="3"
+                              style="resize:vertical;">{{ request.user.profile.bio }}</textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+            </form>
+        </div>
+
+        <!-- Change Password -->
+        <div class="section-card">
+            <h2>🔒 Change Password</h2>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="change_password">
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <input type="password" name="old_password" placeholder="••••••••">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <input type="password" name="new_password" placeholder="••••••••">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm New Password</label>
+                        <input type="password" name="new_password2" placeholder="••••••••">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-ghost">🔑 Update Password</button>
+            </form>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="section-card" style="border-color:rgba(255,77,106,0.25);">
+            <h2 style="color:var(--red);">⚠️ Account</h2>
+            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">
+                Manage your account settings and subscription.
+            </p>
+            <a href="{% url 'subscription' %}" class="btn btn-ghost">💎 Manage Subscription</a>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function previewAvatar(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const avatarEl = document.querySelector('.profile-avatar');
+            avatarEl.innerHTML = `<img src="${e.target.result}" alt="Avatar preview">`;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+{% endblock %}

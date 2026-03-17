@@ -1,0 +1,146 @@
+{% extends 'chat/base.html' %}
+{% block title %}New Chat — Spark Chat{% endblock %}
+{% block extra_css %}
+<style>
+.create-page { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:40px 20px;
+    background:radial-gradient(ellipse at 30% 40%, rgba(108,99,255,0.1) 0%, transparent 50%); }
+.create-card { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:36px; max-width:540px; width:100%; }
+.create-card h1 { font-size:24px; font-weight:700; margin-bottom:4px; }
+.create-card > p { color:var(--text-secondary); margin-bottom:28px; }
+.tabs { display:flex; gap:8px; margin-bottom:24px; background:var(--bg-tertiary); padding:4px; border-radius:10px; }
+.tab-btn { flex:1; padding:8px; border:none; border-radius:8px; cursor:pointer; font-family:'Sora',sans-serif; font-size:14px; font-weight:500; color:var(--text-secondary); background:transparent; transition:all 0.2s; }
+.tab-btn.active { background:var(--accent); color:#fff; box-shadow:0 0 16px var(--accent-glow); }
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+.form-group { margin-bottom:18px; }
+.form-group label { display:block; font-size:13px; font-weight:500; color:var(--text-secondary); margin-bottom:8px; }
+.search-results { background:var(--bg-tertiary); border:1px solid var(--border); border-radius:8px; margin-top:6px; max-height:240px; overflow-y:auto; }
+.user-option { display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; transition:background 0.15s; }
+.user-option:hover { background:var(--bg-hover); }
+.user-option input { width:16px; height:16px; accent-color:var(--accent); }
+.selected-users { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; min-height:36px; }
+.selected-chip { background:var(--accent); color:#fff; border-radius:20px; padding:4px 12px 4px 10px; font-size:12px; display:flex; align-items:center; gap:6px; }
+.selected-chip button { background:none; border:none; color:#fff; cursor:pointer; font-size:14px; padding:0; line-height:1; opacity:0.8; }
+.av-purple { background:linear-gradient(135deg,#6c63ff,#a78bfa); color:#fff; }
+.av-green { background:linear-gradient(135deg,#22d3a0,#059669); color:#fff; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="create-page">
+    <div class="create-card">
+        <a href="{% url 'home' %}" style="color:var(--text-muted);text-decoration:none;font-size:13px;display:inline-flex;align-items:center;gap:4px;margin-bottom:16px;">← Back to chats</a>
+        <h1>New Conversation</h1>
+        <p>Start a direct message or create a group</p>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('direct')">💬 Direct Message</button>
+            <button class="tab-btn" onclick="switchTab('group')">👥 Group Chat</button>
+        </div>
+
+        <!-- Direct Message -->
+        <div class="tab-content active" id="tab-direct">
+            <form method="POST" id="form-direct">
+                {% csrf_token %}
+                <input type="hidden" name="room_type" value="direct">
+                <input type="hidden" name="members" id="direct-member-id" required>
+                <div class="form-group">
+                    <label>Search User</label>
+                    <input type="text" id="user-search-direct" placeholder="Search by username or name..." autocomplete="off" oninput="searchUsers(this.value, 'direct')">
+                    <div class="search-results" id="results-direct" style="display:none;"></div>
+                </div>
+                <div class="selected-users" id="selected-direct"></div>
+                <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:20px;padding:13px;">Start Chat ➤</button>
+            </form>
+        </div>
+
+        <!-- Group Chat -->
+        <div class="tab-content" id="tab-group">
+            <form method="POST" id="form-group">
+                {% csrf_token %}
+                <input type="hidden" name="room_type" value="group">
+                <div class="form-group">
+                    <label>Group Name *</label>
+                    <input type="text" name="name" placeholder="e.g. Team Rocket, Book Club..." required>
+                </div>
+                <div class="form-group">
+                    <label>Add Members</label>
+                    <input type="text" id="user-search-group" placeholder="Search users..." autocomplete="off" oninput="searchUsers(this.value, 'group')">
+                    <div class="search-results" id="results-group" style="display:none;"></div>
+                    <div class="selected-users" id="selected-group" style="margin-top:10px;"></div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px;padding:13px;">Create Group 🎉</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (i===0&&tab==='direct')||(i===1&&tab==='group')));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-'+tab).classList.add('active');
+}
+
+const selectedUsers = { direct: new Map(), group: new Map() };
+
+async function searchUsers(q, type) {
+    const resultsEl = document.getElementById('results-'+type);
+    if (q.length < 2) { resultsEl.style.display = 'none'; return; }
+    
+    const res = await fetch(`/api/users/search/?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    
+    if (!data.users.length) {
+        resultsEl.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px;">No users found</div>';
+        resultsEl.style.display = 'block';
+        return;
+    }
+    
+    resultsEl.innerHTML = data.users.map(u => `
+        <div class="user-option" onclick="selectUser(${u.id},'${u.username}','${u.full_name||u.username}','${type}')">
+            <div class="avatar av-purple sm" style="width:32px;height:32px;font-size:12px;">${u.initials}</div>
+            <div style="flex:1;">
+                <div style="font-size:13px;font-weight:500;">${u.full_name || u.username}</div>
+                <div style="font-size:12px;color:var(--text-muted);">@${u.username}</div>
+            </div>
+            ${u.is_online ? '<div style="width:8px;height:8px;background:var(--green);border-radius:50%;"></div>' : ''}
+        </div>`).join('');
+    resultsEl.style.display = 'block';
+}
+
+function selectUser(id, username, displayName, type) {
+    if (type === 'direct') {
+        // Only one user for DM
+        selectedUsers.direct.clear();
+        document.getElementById('direct-member-id').value = id;
+    }
+    selectedUsers[type].set(id, displayName);
+    document.getElementById('results-'+type).style.display = 'none';
+    document.getElementById('user-search-'+type).value = '';
+    renderSelected(type);
+}
+
+function removeUser(id, type) {
+    selectedUsers[type].delete(id);
+    renderSelected(type);
+}
+
+function renderSelected(type) {
+    const container = document.getElementById('selected-'+type);
+    container.innerHTML = Array.from(selectedUsers[type].entries()).map(([id, name]) => `
+        <div class="selected-chip">
+            ${name}
+            <button onclick="removeUser(${id},'${type}')">✕</button>
+            ${type==='group'?`<input type="hidden" name="members" value="${id}">` : ''}
+        </div>`).join('');
+}
+
+// Close results on outside click
+document.addEventListener('click', e => {
+    if (!e.target.closest('.search-results') && !e.target.closest('input')) {
+        document.querySelectorAll('.search-results').forEach(el => el.style.display = 'none');
+    }
+});
+</script>
+{% endblock %}
