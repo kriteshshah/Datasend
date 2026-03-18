@@ -388,13 +388,8 @@ def create_checkout_session(request):
         success_url = request.build_absolute_uri('/subscribe/success/?session_id={CHECKOUT_SESSION_ID}')
         cancel_url  = request.build_absolute_uri('/subscribe/?cancelled=1')
 
-        # payment_method_types for India:
-        #   card → credit/debit cards
-        #   upi  → UPI (shows QR code + collect flow in Stripe Checkout)
-        #          Requires: currency=INR, Indian Stripe account,
-        #          UPI enabled in Stripe Dashboard → Settings → Payment methods
         session_params = {
-            'payment_method_types': ['card', 'upi'],
+            'payment_method_types': ['card'],
             'mode': 'subscription',
             'client_reference_id': str(request.user.id),
             'customer_email': request.user.email or None,
@@ -406,7 +401,7 @@ def create_checkout_session(request):
             }],
             # Allow promotion codes in the checkout
             'allow_promotion_codes': True,
-            # Collect billing address (required for UPI)
+            # Collect billing address
             'billing_address_collection': 'auto',
             # Locale — auto-detects Indian users
             'locale': 'auto',

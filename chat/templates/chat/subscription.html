@@ -72,32 +72,6 @@
 .banner.info  { background: rgba(108,99,255,0.12); border: 1px solid rgba(108,99,255,0.3); color: var(--accent-2); }
 .banner.success { background: rgba(34,211,160,0.12); border: 1px solid rgba(34,211,160,0.3); color: var(--green); }
 
-/* Payment method badges */
-.payment-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    justify-content: center;
-    margin: 10px 0 4px;
-}
-.pay-badge {
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 4px 10px;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-.pay-badge.upi {
-    background: rgba(9,121,57,0.15);
-    border-color: rgba(9,121,57,0.4);
-    color: #22d3a0;
-}
-
 /* Cancel subscription */
 .cancel-link { font-size: 12px; color: var(--red); cursor: pointer; background: none; border: none; font-family: 'Sora', sans-serif; margin-top: 8px; display: block; text-align: center; }
 .cancel-link:hover { text-decoration: underline; }
@@ -205,19 +179,6 @@
                         <span id="btn-text">⚡ Upgrade Now — {{ subscription_price }}/mo</span>
                     </button>
                 </div>
-                <!-- Payment method badges -->
-                <div class="payment-badges">
-                    <span class="pay-badge">💳 Card</span>
-                    <span class="pay-badge upi">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin-right:3px">
-                            <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" fill="#097939"/>
-                            <path d="M8 12l2.5 2.5L16 9" stroke="white" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                        UPI
-                    </span>
-                    <span class="pay-badge">📱 QR Code</span>
-                    <span class="pay-badge">🏦 Net Banking</span>
-                </div>
                 <div class="upgrade-note">Secure payment via Stripe · Cancel anytime</div>
                 <!-- Already paid but plan didn't activate? -->
                 <div id="already-paid-wrap" style="margin-top:10px;text-align:center;">
@@ -248,11 +209,7 @@
         <div class="faq-item" onclick="this.classList.toggle('open')">
             <div class="faq-q">What payment methods are accepted? <span>+</span></div>
             <div class="faq-a">
-                We accept:<br><br>
-                💳 <strong>Cards</strong> — Visa, Mastercard, RuPay credit &amp; debit cards<br>
-                📱 <strong>UPI</strong> — GPay, PhonePe, Paytm, BHIM and all UPI apps. Stripe shows a QR code you can scan directly from any UPI app.<br>
-                🏦 <strong>Net Banking</strong> — All major Indian banks<br><br>
-                Payments are processed by Stripe, one of the world's most trusted payment platforms.
+                We accept all major credit and debit cards (Visa, Mastercard, RuPay) via Stripe — one of the world's most trusted payment platforms.
             </div>
         </div>
         <div class="faq-item" onclick="this.classList.toggle('open')">
