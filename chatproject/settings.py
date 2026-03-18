@@ -11,7 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load .env for local dev — on Render env vars are injected directly,
 # so this is a no-op in production (file simply won't exist).
-load_dotenv(BASE_DIR / '.env')
+load_dotenv(BASE_DIR / '.env.staging')
 
 # ── Security ──────────────────────────────────────────────────────────────────
 SECRET_KEY = os.getenv('SECRET_KEY')
