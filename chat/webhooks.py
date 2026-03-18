@@ -66,10 +66,18 @@ def stripe_webhook(request):
 
 
 def _handle_checkout_completed(session):
-    """Activate Pro plan after successful checkout."""
-    customer_id = session.get('customer')
-    subscription_id = session.get('subscription')
-    client_ref = session.get('client_reference_id')  # We'll pass user.id here
+    """Activate Pro plan after successful checkout. Called by webhook."""
+    # session can be a Stripe SDK object OR a plain dict — handle both
+    def _get(obj, key, default=None):
+        if hasattr(obj, key):
+            return getattr(obj, key, default)
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return default
+
+    client_ref      = _get(session, 'client_reference_id')
+    customer_id     = _get(session, 'customer', '')
+    subscription_id = _get(session, 'subscription', '')
 
     if not client_ref:
         return
@@ -77,19 +85,19 @@ def _handle_checkout_completed(session):
     try:
         user = User.objects.get(id=client_ref)
         sub, _ = Subscription.objects.get_or_create(user=user)
-        sub.plan = Subscription.PLAN_PRO
-        sub.status = Subscription.STATUS_ACTIVE
-        sub.stripe_customer_id = customer_id or ''
+        sub.plan                   = Subscription.PLAN_PRO
+        sub.status                 = Subscription.STATUS_ACTIVE
+        sub.stripe_customer_id     = customer_id or ''
         sub.stripe_subscription_id = subscription_id or ''
-        sub.started_at = timezone.now()
-        sub.expires_at = timezone.now() + datetime.timedelta(days=30)
+        sub.started_at             = timezone.now()
+        sub.expires_at             = timezone.now() + datetime.timedelta(days=30)
         sub.save()
 
-        Notification.objects.create(
+        Notification.objects.get_or_create(
             recipient=user,
             notification_type=Notification.TYPE_SUBSCRIPTION,
             title='🎉 Welcome to Pro!',
-            body='You now have unlimited messaging and all premium features unlocked.',
+            defaults={'body': 'You now have unlimited messaging and all premium features unlocked.'}
         )
     except User.DoesNotExist:
         pass

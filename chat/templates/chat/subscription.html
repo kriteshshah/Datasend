@@ -2,109 +2,230 @@
 {% block title %}Upgrade to Pro — Spark Chat{% endblock %}
 {% block extra_css %}
 <style>
-.sub-page { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px;
-    background: radial-gradient(ellipse at 20% 30%, rgba(108,99,255,0.15) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 70%, rgba(34,211,160,0.1) 0%, transparent 50%); }
-.sub-header { text-align:center; margin-bottom:48px; }
-.sub-header h1 { font-size:40px; font-weight:700; background:linear-gradient(135deg,var(--accent),var(--accent-2),var(--green)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:12px; }
-.sub-header p { color:var(--text-secondary); font-size:18px; }
-.quota-status { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px 28px; margin-bottom:36px; display:flex; align-items:center; gap:16px; max-width:480px; width:100%; }
-.quota-icon { font-size:40px; }
-.quota-info h3 { font-size:16px; font-weight:600; }
-.quota-info p { color:var(--text-secondary); font-size:14px; margin-top:4px; }
-.progress { height:6px; background:var(--border); border-radius:3px; margin-top:10px; overflow:hidden; }
-.progress-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--green),var(--accent)); }
-.plans { display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:680px; width:100%; margin-bottom:32px; }
-.plan-card { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:28px; transition:all 0.3s; }
-.plan-card.featured { background:linear-gradient(135deg,rgba(108,99,255,0.15),rgba(167,139,250,0.1)); border-color:var(--accent); box-shadow:0 0 40px var(--accent-glow); }
-.plan-badge { background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; padding:3px 12px; border-radius:20px; font-size:12px; font-weight:600; display:inline-block; margin-bottom:12px; }
-.plan-name { font-size:22px; font-weight:700; margin-bottom:8px; }
-.plan-price { font-size:40px; font-weight:800; }
-.plan-price span { font-size:16px; font-weight:400; color:var(--text-secondary); }
-.plan-features { margin:20px 0; display:flex; flex-direction:column; gap:10px; }
-.feature { display:flex; align-items:center; gap:10px; font-size:14px; }
-.feature .check { color:var(--green); font-size:16px; }
-.feature .cross { color:var(--text-muted); font-size:16px; }
-.feature-text { color:var(--text-secondary); }
-.feature.active .feature-text { color:var(--text-primary); }
-.current-badge { background:var(--surface-2); border:1px solid var(--border); color:var(--text-muted); text-align:center; padding:10px; border-radius:var(--radius-sm); font-size:14px; }
-.faq { max-width:560px; width:100%; }
-.faq h2 { font-size:22px; font-weight:700; margin-bottom:20px; text-align:center; }
-.faq-item { border-bottom:1px solid var(--border); padding:16px 0; cursor:pointer; }
-.faq-q { font-size:15px; font-weight:500; display:flex; justify-content:space-between; align-items:center; }
-.faq-a { color:var(--text-secondary); font-size:14px; margin-top:10px; display:none; line-height:1.7; }
-.faq-item.open .faq-a { display:block; }
-@media(max-width:600px){ .plans{grid-template-columns:1fr;} }
+.sub-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    background:
+        radial-gradient(ellipse at 20% 30%, rgba(108,99,255,0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 70%, rgba(34,211,160,0.1) 0%, transparent 50%);
+}
+.sub-header { text-align: center; margin-bottom: 40px; }
+.sub-header h1 {
+    font-size: 38px; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2), var(--green));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+}
+.sub-header p { color: var(--text-secondary); font-size: 17px; }
+
+.quota-status {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 24px; margin-bottom: 32px;
+    display: flex; align-items: center; gap: 16px; max-width: 480px; width: 100%;
+}
+.progress { height: 6px; background: var(--border); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--green), var(--accent)); }
+
+.plans { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 700px; width: 100%; margin-bottom: 32px; }
+.plan-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px; }
+.plan-card.featured {
+    background: linear-gradient(135deg, rgba(108,99,255,0.15), rgba(167,139,250,0.1));
+    border-color: var(--accent); box-shadow: 0 0 40px var(--accent-glow);
+}
+.plan-badge {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff; padding: 3px 12px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; display: inline-block; margin-bottom: 12px;
+}
+.plan-name { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.plan-price { font-size: 42px; font-weight: 800; }
+.plan-price span { font-size: 15px; font-weight: 400; color: var(--text-secondary); }
+.plan-features { margin: 20px 0; display: flex; flex-direction: column; gap: 10px; }
+.feature { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.check { color: var(--green); } .cross { color: var(--text-muted); }
+.current-badge {
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text-muted); text-align: center;
+    padding: 10px; border-radius: var(--radius-sm); font-size: 14px;
+}
+
+/* Upgrade button */
+.upgrade-btn-wrap { position: relative; }
+.upgrade-btn-main {
+    width: 100%; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff; border: none; border-radius: var(--radius-sm); padding: 14px;
+    font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Sora', sans-serif;
+    box-shadow: 0 0 24px var(--accent-glow); transition: all 0.2s; display: flex;
+    align-items: center; justify-content: center; gap: 8px;
+}
+.upgrade-btn-main:hover { transform: translateY(-2px); box-shadow: 0 4px 32px var(--accent-glow); }
+.upgrade-btn-main:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.upgrade-note { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+
+/* Error / info banner */
+.banner { border-radius: 10px; padding: 12px 16px; font-size: 13px; margin-bottom: 16px; }
+.banner.error { background: rgba(255,77,106,0.12); border: 1px solid rgba(255,77,106,0.3); color: var(--red); }
+.banner.info  { background: rgba(108,99,255,0.12); border: 1px solid rgba(108,99,255,0.3); color: var(--accent-2); }
+.banner.success { background: rgba(34,211,160,0.12); border: 1px solid rgba(34,211,160,0.3); color: var(--green); }
+
+/* Payment method badges */
+.payment-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin: 10px 0 4px;
+}
+.pay-badge {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.pay-badge.upi {
+    background: rgba(9,121,57,0.15);
+    border-color: rgba(9,121,57,0.4);
+    color: #22d3a0;
+}
+
+/* Cancel subscription */
+.cancel-link { font-size: 12px; color: var(--red); cursor: pointer; background: none; border: none; font-family: 'Sora', sans-serif; margin-top: 8px; display: block; text-align: center; }
+.cancel-link:hover { text-decoration: underline; }
+
+/* Active pro badge */
+.pro-active-box {
+    background: linear-gradient(135deg, rgba(108,99,255,0.2), rgba(167,139,250,0.15));
+    border: 1px solid var(--accent); border-radius: 12px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+}
+
+/* FAQ */
+.faq { max-width: 560px; width: 100%; }
+.faq h2 { font-size: 20px; font-weight: 700; margin-bottom: 16px; text-align: center; }
+.faq-item { border-bottom: 1px solid var(--border); padding: 14px 0; cursor: pointer; }
+.faq-q { font-size: 14px; font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
+.faq-a { color: var(--text-secondary); font-size: 13px; margin-top: 10px; display: none; line-height: 1.7; }
+.faq-item.open .faq-q span { transform: rotate(45deg); }
+.faq-item.open .faq-a { display: block; }
+.faq-q span { display: inline-block; transition: transform 0.2s; font-size: 18px; }
+
+@media(max-width: 600px) { .plans { grid-template-columns: 1fr; } }
 </style>
 {% endblock %}
+
 {% block content %}
 <div class="sub-page">
     <a href="{% url 'home' %}" style="position:fixed;top:20px;left:20px;text-decoration:none;" class="btn btn-ghost">← Back</a>
-    
+
     <div class="sub-header">
         <div style="font-size:52px;margin-bottom:12px;">⚡</div>
         <h1>Upgrade to Pro</h1>
         <p>Unlock unlimited messaging and all premium features</p>
     </div>
 
-    <!-- Current Quota Status -->
+    <!-- Quota status -->
     <div class="quota-status">
-        <div class="quota-icon">{% if is_pro %}🌟{% else %}💬{% endif %}</div>
-        <div class="quota-info" style="flex:1;">
+        <div style="font-size:36px;">{% if is_pro %}🌟{% else %}💬{% endif %}</div>
+        <div style="flex:1;">
             {% if is_pro %}
-            <h3>You're on Pro Plan!</h3>
-            <p>Unlimited messages, all features unlocked</p>
+                <strong>You're on Pro Plan!</strong>
+                <div style="font-size:13px;color:var(--text-secondary);margin-top:3px;">
+                    Unlimited messages · All features unlocked
+                    {% if subscription.expires_at %}
+                    · Renews {{ subscription.expires_at|date:"d M Y" }}
+                    {% endif %}
+                </div>
             {% else %}
-            <h3>Free Plan — {{ remaining }} messages left today</h3>
-            <p>{{ free_limit }} free messages per day</p>
-            <div class="progress">
-                <div class="progress-fill" style="width:{% widthratio remaining free_limit 100 %}%;"></div>
-            </div>
+                <strong>Free Plan — {{ remaining }}/{{ free_limit }} messages left today</strong>
+                <div class="progress" style="margin-top:8px;">
+                    <div class="progress-fill" style="width:{% widthratio remaining free_limit 100 %}%;"></div>
+                </div>
             {% endif %}
         </div>
     </div>
 
-    <!-- Plan Cards -->
+    <!-- Plan cards -->
     <div class="plans">
-        <!-- Free Plan -->
+        <!-- Free -->
         <div class="plan-card">
             <div class="plan-name">Free</div>
             <div class="plan-price">₹0<span>/mo</span></div>
             <div class="plan-features">
-                <div class="feature active"><span class="check">✓</span><span class="feature-text">30 messages/day</span></div>
-                <div class="feature active"><span class="check">✓</span><span class="feature-text">Image sharing</span></div>
-                <div class="feature active"><span class="check">✓</span><span class="feature-text">Emoji reactions</span></div>
-                <div class="feature"><span class="cross">✗</span><span class="feature-text" style="color:var(--text-muted);">Video sharing</span></div>
-                <div class="feature"><span class="cross">✗</span><span class="feature-text" style="color:var(--text-muted);">Document sharing</span></div>
-                <div class="feature"><span class="cross">✗</span><span class="feature-text" style="color:var(--text-muted);">Priority support</span></div>
+                <div class="feature"><span class="check">✓</span> {{ free_limit }} messages/day</div>
+                <div class="feature"><span class="check">✓</span> Image sharing</div>
+                <div class="feature"><span class="check">✓</span> Emoji &amp; reactions</div>
+                <div class="feature"><span class="cross">✗</span> <span style="color:var(--text-muted)">Video sharing</span></div>
+                <div class="feature"><span class="cross">✗</span> <span style="color:var(--text-muted)">Document sharing</span></div>
+                <div class="feature"><span class="cross">✗</span> <span style="color:var(--text-muted)">Priority support</span></div>
             </div>
             {% if not is_pro %}
-            <div class="current-badge">Current Plan</div>
-            {% else %}
-            <div class="current-badge">Basic Tier</div>
+            <div class="current-badge">✓ Current Plan</div>
             {% endif %}
         </div>
 
-        <!-- Pro Plan -->
+        <!-- Pro -->
         <div class="plan-card featured">
             <div class="plan-badge">✨ MOST POPULAR</div>
             <div class="plan-name">Pro</div>
-            <div class="plan-price">₹299<span>/mo</span></div>
+            <div class="plan-price">{{ subscription_price }}<span>/mo</span></div>
             <div class="plan-features">
-                <div class="feature active"><span class="check">✓</span><span class="feature-text">Unlimited messages</span></div>
-                <div class="feature active"><span class="check">✓</span><span class="feature-text">Image sharing (10MB)</span></div>
-                <div class="feature active"><span class="check">✓</span><span class="feature-text">Video sharing (100MB)</span></div>
-                <div class="feature active"><span class="check">✓</span><span class="feature-text">Document sharing (25MB)</span></div>
-                <div class="feature active"><span class="check">✓</span><span class="feature-text">Emoji reactions</span></div>
-                <div class="feature active"><span class="check">✓</span><span class="feature-text">Priority support</span></div>
+                <div class="feature"><span class="check">✓</span> Unlimited messages</div>
+                <div class="feature"><span class="check">✓</span> Images up to 10 MB</div>
+                <div class="feature"><span class="check">✓</span> Videos up to 100 MB</div>
+                <div class="feature"><span class="check">✓</span> Docs, PDFs, Spreadsheets</div>
+                <div class="feature"><span class="check">✓</span> Emoji &amp; reactions</div>
+                <div class="feature"><span class="check">✓</span> Priority support</div>
             </div>
+
             {% if is_pro %}
-            <div class="current-badge" style="background:rgba(108,99,255,0.2);border-color:var(--accent);color:var(--accent);">✓ Active</div>
+                <div class="pro-active-box">
+                    <span style="font-size:24px;">✅</span>
+                    <div>
+                        <div style="font-weight:600;color:var(--accent);">Pro is Active</div>
+                        <div style="font-size:12px;color:var(--text-secondary);">Enjoy unlimited messaging!</div>
+                    </div>
+                </div>
+                {% if subscription.stripe_subscription_id %}
+                <button class="cancel-link" onclick="cancelSubscription()">Cancel subscription</button>
+                {% endif %}
             {% else %}
-            <button onclick="initiateUpgrade()" class="btn btn-primary" style="width:100%;justify-content:center;padding:13px;">
-                Upgrade Now ⚡
-            </button>
-            <div style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:10px;">Cancel anytime • Instant activation</div>
+                <div id="upgrade-error" class="banner error" style="display:none;"></div>
+                <div class="upgrade-btn-wrap">
+                    <button class="upgrade-btn-main" id="upgrade-btn" onclick="startCheckout()">
+                        <span id="btn-text">⚡ Upgrade Now — {{ subscription_price }}/mo</span>
+                    </button>
+                </div>
+                <!-- Payment method badges -->
+                <div class="payment-badges">
+                    <span class="pay-badge">💳 Card</span>
+                    <span class="pay-badge upi">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin-right:3px">
+                            <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" fill="#097939"/>
+                            <path d="M8 12l2.5 2.5L16 9" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        UPI
+                    </span>
+                    <span class="pay-badge">📱 QR Code</span>
+                    <span class="pay-badge">🏦 Net Banking</span>
+                </div>
+                <div class="upgrade-note">Secure payment via Stripe · Cancel anytime</div>
+                <!-- Already paid but plan didn't activate? -->
+                <div id="already-paid-wrap" style="margin-top:10px;text-align:center;">
+                    <button onclick="alreadyPaid()" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;font-family:'Sora',sans-serif;text-decoration:underline;">
+                        Already paid but Pro isn't showing?
+                    </button>
+                </div>
+                <div id="activate-result" class="banner" style="display:none;"></div>
             {% endif %}
         </div>
     </div>
@@ -112,51 +233,120 @@
     <!-- FAQ -->
     <div class="faq">
         <h2>Frequently Asked Questions</h2>
-        {% for q, a in faq_items|default:"" %}{% empty %}
         <div class="faq-item" onclick="this.classList.toggle('open')">
             <div class="faq-q">How does the free plan work? <span>+</span></div>
-            <div class="faq-a">The free plan gives you 30 messages per day. The counter resets every day at midnight. Images, videos, and documents each count as one message.</div>
+            <div class="faq-a">The free plan gives you {{ free_limit }} messages per day. The counter resets every day at midnight IST.</div>
+        </div>
+        <div class="faq-item" onclick="this.classList.toggle('open')">
+            <div class="faq-q">What happens after I pay {{ subscription_price }}? <span>+</span></div>
+            <div class="faq-a">Your Pro plan activates immediately after payment. You get unlimited messages, video &amp; document sharing right away.</div>
         </div>
         <div class="faq-item" onclick="this.classList.toggle('open')">
             <div class="faq-q">Can I cancel anytime? <span>+</span></div>
-            <div class="faq-a">Yes! You can cancel your Pro subscription at any time. You'll continue to have Pro access until the end of your billing period.</div>
+            <div class="faq-a">Yes. Cancel anytime from this page. You keep Pro access until the end of the current billing period.</div>
         </div>
         <div class="faq-item" onclick="this.classList.toggle('open')">
             <div class="faq-q">What payment methods are accepted? <span>+</span></div>
-            <div class="faq-a">We accept all major credit/debit cards, UPI, and net banking through Stripe, one of the most trusted payment processors worldwide.</div>
+            <div class="faq-a">
+                We accept:<br><br>
+                💳 <strong>Cards</strong> — Visa, Mastercard, RuPay credit &amp; debit cards<br>
+                📱 <strong>UPI</strong> — GPay, PhonePe, Paytm, BHIM and all UPI apps. Stripe shows a QR code you can scan directly from any UPI app.<br>
+                🏦 <strong>Net Banking</strong> — All major Indian banks<br><br>
+                Payments are processed by Stripe, one of the world's most trusted payment platforms.
+            </div>
         </div>
         <div class="faq-item" onclick="this.classList.toggle('open')">
-            <div class="faq-q">Is my data secure? <span>+</span></div>
-            <div class="faq-a">Yes. All messages are transmitted over secure WebSocket connections (WSS) and media files are stored securely. We never share your data with third parties.</div>
+            <div class="faq-q">Is my payment secure? <span>+</span></div>
+            <div class="faq-a">Yes. Payments are processed entirely by Stripe. We never store your card details on our servers.</div>
         </div>
-        {% endfor %}
-    </div>
-</div>
-
-<div class="modal-overlay" id="upgrade-modal">
-    <div class="modal" style="text-align:center;">
-        <div style="font-size:48px;margin-bottom:16px;">⚡</div>
-        <h2>Upgrade to Pro</h2>
-        <p>Payment integration requires Stripe configuration. Set your STRIPE_SECRET_KEY in .env to enable payments.</p>
-        <div style="background:var(--bg-tertiary);border-radius:8px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent-2);text-align:left;margin-bottom:20px;">
-            STRIPE_SECRET_KEY=sk_live_...<br>
-            STRIPE_PUBLIC_KEY=pk_live_...<br>
-            STRIPE_PRICE_ID=price_...
-        </div>
-        <button onclick="document.getElementById('upgrade-modal').classList.remove('active')" class="btn btn-primary" style="width:100%;justify-content:center;">Got it</button>
     </div>
 </div>
 {% endblock %}
+
 {% block extra_js %}
 <script>
-function initiateUpgrade() {
-    // In production, integrate with Stripe Checkout
-    // For now, show config instructions
-    document.getElementById('upgrade-modal').classList.add('active');
-    
-    // Example Stripe integration:
-    // const stripe = Stripe('{{ stripe_public_key }}');
-    // stripe.redirectToCheckout({ lineItems: [{price: 'PRICE_ID', quantity: 1}], mode: 'subscription', successUrl: window.location.origin + '/subscribe/success/', cancelUrl: window.location.origin + '/subscribe/' });
+async function startCheckout() {
+    const btn      = document.getElementById('upgrade-btn');
+    const btnText  = document.getElementById('btn-text');
+    const errorBox = document.getElementById('upgrade-error');
+
+    // Loading state
+    btn.disabled = true;
+    btnText.textContent = '⏳ Loading secure checkout…';
+    errorBox.style.display = 'none';
+
+    try {
+        const res  = await fetch('{% url "create_checkout" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+        });
+        const data = await res.json();
+
+        if (data.checkout_url) {
+            // Redirect to Stripe-hosted checkout page
+            window.location.href = data.checkout_url;
+        } else {
+            throw new Error(data.error || 'Could not create checkout session.');
+        }
+    } catch (err) {
+        errorBox.textContent = '⚠️ ' + err.message;
+        errorBox.style.display = 'block';
+        btn.disabled = false;
+        btnText.textContent = '⚡ Try Again';
+    }
+}
+
+async function alreadyPaid() {
+    const result = document.getElementById('activate-result');
+    const wrap   = document.getElementById('already-paid-wrap');
+    wrap.innerHTML = '<span style="color:var(--text-muted);font-size:12px;">⏳ Checking your payment...</span>';
+    result.style.display = 'none';
+
+    try {
+        const res  = await fetch('{% url "manual_activate" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF },
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            result.className = 'banner success';
+            result.textContent = data.message;
+            result.style.display = 'block';
+            wrap.style.display = 'none';
+            // Reload after 2s to show Pro status
+            setTimeout(() => window.location.reload(), 2000);
+        } else {
+            result.className = 'banner error';
+            result.textContent = '⚠️ ' + (data.error || 'Could not verify payment.');
+            result.style.display = 'block';
+            wrap.innerHTML = '<button onclick="alreadyPaid()" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;font-family:Sora,sans-serif;text-decoration:underline;">Try again</button>';
+        }
+    } catch(e) {
+        result.className = 'banner error';
+        result.textContent = '⚠️ Network error. Please try again.';
+        result.style.display = 'block';
+    }
+}
+
+async function cancelSubscription() {
+    if (!confirm('Are you sure you want to cancel your Pro subscription?\nYou will keep Pro access until the end of the current billing period.')) return;
+
+    try {
+        const res  = await fetch('{% url "cancel_subscription" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF },
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Subscription cancelled', data.message, 'success');
+            setTimeout(() => window.location.reload(), 2000);
+        } else {
+            showToast('Error', data.error, 'error');
+        }
+    } catch (e) {
+        showToast('Error', 'Could not cancel subscription. Try again.', 'error');
+    }
 }
 </script>
 {% endblock %}

@@ -27,10 +27,13 @@ urlpatterns = [
     path('subscribe/', views.subscription_page, name='subscription'),
     path('subscribe/create-checkout/', views.create_checkout_session, name='create_checkout'),
     path('subscribe/success/', views.subscription_success, name='subscription_success'),
+    path('subscribe/cancel/', views.cancel_subscription, name='cancel_subscription'),
+    path('subscribe/activate/', views.manual_activate, name='manual_activate'),
 
-    # Stripe Webhook
+    # Stripe Webhook (csrf_exempt inside webhooks.py)
     path('webhooks/stripe/', stripe_webhook, name='stripe_webhook'),
 
-    # Profile
+    # Profile & utils
     path('profile/', views.profile_view, name='profile'),
+    path('ws-check/', views.ws_check, name='ws_check'),
 ]
