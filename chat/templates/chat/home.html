@@ -1,4 +1,5 @@
 {% extends 'chat/base.html' %}
+{% load chat_tags %}
 {% block title %}Spark Chat{% endblock %}
 {% block extra_css %}
 <style>
@@ -132,13 +133,13 @@
         <div class="rooms-list" id="rooms-list">
             <div class="section-title">Chats</div>
             {% for room in rooms %}
-            {% with last_msg=room.get_last_message unread=room.get_unread_count|default:0 %}
+            {% with last_msg=room.get_last_message unread=room|get_unread_count:request.user %}
             <a href="{% url 'room' room.id %}" class="room-item" data-room="{{ room.id }}">
                 <div class="avatar av-purple sm">
-                    {{ room.get_display_name|first|upper }}
+                    {{ room|get_display_name:request.user|first|upper }}
                 </div>
                 <div class="room-info">
-                    <div class="room-name">{{ room.get_display_name }}</div>
+                    <div class="room-name">{{ room|get_display_name:request.user }}</div>
                     <div class="room-preview">
                         {% if last_msg %}
                             {% if last_msg.message_type == 'image' %}📷 Photo
@@ -150,9 +151,7 @@
                 </div>
                 <div class="room-meta">
                     {% if last_msg %}<div class="room-time">{{ last_msg.created_at|timesince|truncatechars:8 }}</div>{% endif %}
-                    {% with unread_count=room.get_unread_count %}
-                    {% if unread_count %}<div class="unread-badge">{{ unread_count }}</div>{% endif %}
-                    {% endwith %}
+                    {% if unread %}<div class="unread-badge">{{ unread }}</div>{% endif %}
                 </div>
             </a>
             {% endwith %}
