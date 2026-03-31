@@ -152,10 +152,18 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
+# Auto-detect environment: Render injects RENDER=true
+_IS_PRODUCTION = os.getenv('RENDER', '') == 'true'
+_SITE_DOMAIN   = 'datasend-xpoz.onrender.com' if _IS_PRODUCTION else '127.0.0.1:8000'
+_SITE_PROTOCOL = 'https' if _IS_PRODUCTION else 'http'
+_CALLBACK_URL  = f'{_SITE_PROTOCOL}://{_SITE_DOMAIN}/accounts/google/login/callback/'
+
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': ['profile', 'email'],
         'AUTH_PARAMS': {'access_type': 'online'},
+        'OAUTH_PKCE_ENABLED': True,
+        'REDIRECT_URI': _CALLBACK_URL,
         'APP': {
             'client_id': os.getenv('GOOGLE_CLIENT_ID', ''),
             'secret': os.getenv('GOOGLE_CLIENT_SECRET', ''),
