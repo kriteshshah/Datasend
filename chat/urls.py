@@ -1,6 +1,10 @@
 from django.urls import path
 from . import views
 from .webhooks import stripe_webhook
+from allauth.socialaccount.providers.oauth2.views import OAuth2LoginView
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+
+google_login = OAuth2LoginView.adapter_view(GoogleOAuth2Adapter)
 
 urlpatterns = [
     # Auth
@@ -8,6 +12,8 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('register/', views.register_view, name='register'),
     path('logout/', views.logout_view, name='logout'),
+    # Google OAuth shortcut
+    path('login/google/', google_login, name='google_login_redirect'),
 
     # Chat
     path('room/<uuid:room_id>/', views.room_view, name='room'),
