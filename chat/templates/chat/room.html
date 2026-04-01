@@ -187,7 +187,111 @@
 .online-indicator { width:8px; height:8px; border-radius:50%; background:var(--border); }
 .online-indicator.online { background:var(--green); }
 
-@media(max-width:768px){ .sidebar{display:none;} .members-panel{display:none!important;} }
+/* AI side panel */
+.ai-panel {
+    width: min(360px, 100vw - 48px);
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border);
+    flex-shrink: 0;
+    display: none;
+    flex-direction: column;
+    min-height: 0;
+    z-index: 20;
+}
+.ai-panel.open { display: flex; }
+.ai-panel-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    font-size: 14px;
+}
+.ai-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.ai-tab {
+    flex: 1;
+    padding: 10px 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+.ai-tab:hover { color: var(--text-primary); background: var(--bg-hover); }
+.ai-tab.active { color: var(--accent-2); border-bottom-color: var(--accent); }
+.ai-panel-body { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.ai-pane { display: none; flex: 1; flex-direction: column; min-height: 0; padding: 12px; gap: 10px; }
+.ai-pane.active { display: flex; }
+.ai-msgs {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 13px;
+}
+.ai-msg { padding: 10px 12px; border-radius: 12px; max-width: 100%; line-height: 1.45; }
+.ai-msg.user { background: var(--accent); color: #fff; align-self: flex-end; }
+.ai-msg.bot { background: var(--surface); border: 1px solid var(--border); align-self: flex-start; white-space: pre-wrap; }
+.ai-msg.bot ul { margin: 8px 0 0 18px; padding: 0; }
+.ai-msg.bot li { margin: 4px 0; }
+.ai-msg.bot p { margin: 0 0 8px; }
+.ai-msg.bot p:last-child { margin-bottom: 0; }
+.ai-thinking { display: inline-flex; align-items: center; gap: 8px; }
+.ai-dots { display: inline-flex; gap: 4px; align-items: center; }
+.ai-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); animation: aiDot 1s infinite; }
+.ai-dots span:nth-child(2) { animation-delay: 0.15s; }
+.ai-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes aiDot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-4px); opacity: 1; } }
+.ai-input-row { display: flex; gap: 8px; align-items: flex-end; }
+.ai-input-row textarea {
+    flex: 1;
+    min-height: 44px;
+    max-height: 100px;
+    resize: none;
+    font-size: 13px;
+    padding: 10px 12px;
+}
+.ai-send-mini {
+    width: 44px; height: 44px;
+    border: none; border-radius: 10px;
+    background: var(--accent); color: #fff;
+    cursor: pointer; flex-shrink: 0;
+    font-size: 18px;
+}
+.ai-send-mini:disabled { opacity: 0.5; cursor: default; }
+.ai-hint { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+.ai-gen-preview {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    white-space: pre-wrap;
+    min-height: 120px;
+}
+.ai-actions-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.ai-actions-row .btn { padding: 8px 14px; font-size: 12px; }
+.icon-btn.ai-active { border-color: var(--accent); color: var(--accent-2); background: var(--accent-glow); }
+
+@media(max-width:768px){
+    .sidebar{display:none;}
+    .members-panel{display:none!important;}
+    .ai-panel {
+        position: fixed;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: min(100vw, 380px);
+        box-shadow: var(--shadow-lg);
+    }
+}
 </style>
 {% endblock %}
 
@@ -227,7 +331,7 @@
             <div style="flex:1;min-width:0;">
                 <div style="font-size:13px;font-weight:500;">{{ request.user.get_full_name|default:request.user.username }}</div>
             </div>
-            <a href="{% url 'logout' %}" class="icon-btn">🚪</a>
+            <a href="{% url 'logout' %}" class="icon-btn js-logout">🚪</a>
         </div>
     </aside>
 
@@ -243,6 +347,9 @@
                 </div>
             </div>
             <div class="chat-header-actions">
+                {% if gemini_enabled %}
+                <button type="button" class="icon-btn" id="ai-toggle-btn" onclick="toggleAiPanel()" title="AI assistant">✨</button>
+                {% endif %}
                 <button class="icon-btn" onclick="toggleMembers()" title="Members">👥</button>
                 <a href="{% url 'home' %}" class="icon-btn" title="Back">←</a>
             </div>
@@ -393,6 +500,50 @@
         </div>
         {% endfor %}
     </div>
+
+    {% if gemini_enabled %}
+    <aside class="ai-panel" id="ai-panel" aria-label="AI assistant">
+        <div class="ai-panel-header">
+            <span>✨ AI</span>
+            <button type="button" class="icon-btn" onclick="toggleAiPanel()" title="Close">✕</button>
+        </div>
+        <div class="ai-tabs">
+            <button type="button" class="ai-tab active" data-ai-tab="ask" onclick="switchAiTab('ask')">Ask</button>
+            <button type="button" class="ai-tab" data-ai-tab="script" onclick="switchAiTab('script')">Script</button>
+            <button type="button" class="ai-tab" data-ai-tab="summary" onclick="switchAiTab('summary')">Summary</button>
+        </div>
+        <div class="ai-panel-body">
+            <div class="ai-pane active" id="ai-pane-ask">
+                <p class="ai-hint">Ask anything — answers use Google Gemini on the server. Chat stays in this panel and is not saved to the room.</p>
+                <div class="ai-msgs" id="ai-assistant-msgs"></div>
+                <div class="ai-input-row">
+                    <textarea id="ai-assistant-input" placeholder="Ask a question…" rows="2" onkeydown="aiAssistantKeydown(event)"></textarea>
+                    <button type="button" class="ai-send-mini" id="ai-assistant-send" onclick="sendAiAssistant()">➤</button>
+                </div>
+            </div>
+            <div class="ai-pane" id="ai-pane-script">
+                <p class="ai-hint">Describe a scene or topic; AI drafts a back-and-forth you can post into this room (uses your daily message quota per line).</p>
+                <textarea id="ai-script-prompt" rows="4" placeholder="e.g. Two friends planning a weekend trip, friendly tone…" style="width:100%;font-size:13px;"></textarea>
+                <label class="ai-hint" style="display:flex;align-items:center;gap:8px;">
+                    <input type="checkbox" id="ai-script-context" checked> Use recent messages in this room as context
+                </label>
+                <label class="ai-hint" style="display:flex;align-items:center;gap:8px;">
+                    Lines (4–24): <input type="number" id="ai-script-turns" min="4" max="24" value="8" style="width:64px;padding:6px;">
+                </label>
+                <div class="ai-actions-row">
+                    <button type="button" class="btn btn-primary" onclick="generateAiScript()">Generate</button>
+                    <button type="button" class="btn btn-ghost" onclick="applyAiScript()" id="ai-script-apply" disabled>Post to chat</button>
+                </div>
+                <div class="ai-gen-preview" id="ai-script-preview">Preview appears here.</div>
+            </div>
+            <div class="ai-pane" id="ai-pane-summary">
+                <p class="ai-hint">Summarize the latest text messages in this room (Gemini).</p>
+                <button type="button" class="btn btn-primary" onclick="summarizeRoomAi()" style="width:100%;justify-content:center;">Summarize chat</button>
+                <div class="ai-gen-preview" id="ai-summary-out" style="min-height:200px;">Summary appears here.</div>
+            </div>
+        </div>
+    </aside>
+    {% endif %}
 </div>
 
 <!-- Lightbox -->
@@ -984,5 +1135,220 @@ notifWS.onmessage = (e) => {
         showToast(data.title, data.body, 'info');
     }
 };
+
+{% if gemini_enabled %}
+// ─── Gemini AI panel ─────────────────────────────────────────────────────────
+const AI_ASSISTANT_URL = '{% url "ai_assistant" %}';
+const AI_TRANSCRIPT_URL = '{% url "ai_transcript" room.id %}';
+const AI_APPLY_URL = '{% url "ai_apply_transcript" room.id %}';
+const AI_SUMMARY_URL = '{% url "ai_summarize_room" room.id %}';
+
+let aiAssistantHistory = [];
+let aiScriptLines = null;
+
+function toggleAiPanel() {
+    const p = document.getElementById('ai-panel');
+    const btn = document.getElementById('ai-toggle-btn');
+    if (!p) return;
+    const open = !p.classList.contains('open');
+    p.classList.toggle('open', open);
+    if (btn) btn.classList.toggle('ai-active', open);
+}
+
+function switchAiTab(tab) {
+    document.querySelectorAll('.ai-tab').forEach(t => {
+        t.classList.toggle('active', t.getAttribute('data-ai-tab') === tab);
+    });
+    document.querySelectorAll('.ai-pane').forEach(pane => {
+        pane.classList.toggle('active', pane.id === 'ai-pane-' + tab);
+    });
+}
+
+async function aiJsonPost(url, body) {
+    const token = typeof CSRF !== 'undefined' && CSRF ? CSRF : getCookie('csrftoken');
+    const r = await fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': token || '',
+        },
+        body: JSON.stringify(body),
+    });
+    let data = {};
+    try { data = await r.json(); } catch (e) {}
+    if (!r.ok) {
+        if (data.error === 'quota_exceeded') {
+            const m = document.getElementById('quota-modal');
+            if (m) m.classList.add('active');
+        }
+        throw new Error(data.error || data.message || r.statusText || 'Request failed');
+    }
+    return data;
+}
+
+function escapeHTMLStrict(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+}
+
+function renderAiMarkdownToHtml(text) {
+    // Safe, minimal markdown renderer: **bold**, inline `code`, paragraphs, and bullet lists.
+    const src = String(text || '');
+    const lines = src.replace(/\r\n/g, '\n').split('\n');
+    const out = [];
+    let inList = false;
+
+    function flushList() {
+        if (inList) { out.push('</ul>'); inList = false; }
+    }
+
+    function inline(md) {
+        let s = escapeHTMLStrict(md);
+        // inline code
+        s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // bold
+        s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        // linkify https?://...
+        s = s.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+        return s;
+    }
+
+    for (const raw of lines) {
+        const line = raw.trimEnd();
+        const m = line.match(/^\s*[-*]\s+(.*)$/);
+        if (m) {
+            if (!inList) { out.push('<ul>'); inList = true; }
+            out.push('<li>' + inline(m[1]) + '</li>');
+            continue;
+        }
+        if (line.trim() === '') {
+            flushList();
+            continue;
+        }
+        flushList();
+        out.push('<p>' + inline(line) + '</p>');
+    }
+    flushList();
+    return out.join('');
+}
+
+function appendAiAssistantMsg(role, text, opts = {}) {
+    const wrap = document.getElementById('ai-assistant-msgs');
+    if (!wrap) return;
+    const div = document.createElement('div');
+    div.className = 'ai-msg ' + (role === 'user' ? 'user' : 'bot');
+    if (role === 'user') {
+        div.textContent = text;
+    } else {
+        if (opts && opts.isThinking) {
+            div.innerHTML = `<span class="ai-thinking">AI is thinking <span class="ai-dots"><span></span><span></span><span></span></span></span>`;
+        } else {
+            div.innerHTML = renderAiMarkdownToHtml(text);
+        }
+    }
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+    return div;
+}
+
+function aiAssistantKeydown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendAiAssistant();
+    }
+}
+
+async function sendAiAssistant() {
+    const inp = document.getElementById('ai-assistant-input');
+    const sendBtn = document.getElementById('ai-assistant-send');
+    const text = (inp && inp.value || '').trim();
+    if (!text) return;
+    const historyPayload = aiAssistantHistory.map(m => ({
+        role: m.role === 'user' ? 'user' : 'model',
+        text: m.text,
+    }));
+    appendAiAssistantMsg('user', text);
+    if (inp) inp.value = '';
+    if (sendBtn) sendBtn.disabled = true;
+    const thinkingEl = appendAiAssistantMsg('bot', '', { isThinking: true });
+    try {
+        const data = await aiJsonPost(AI_ASSISTANT_URL, { message: text, history: historyPayload });
+        const reply = data.reply || '';
+        aiAssistantHistory.push({ role: 'user', text });
+        aiAssistantHistory.push({ role: 'model', text: reply });
+        if (thinkingEl) {
+            thinkingEl.innerHTML = renderAiMarkdownToHtml(reply);
+        } else {
+            appendAiAssistantMsg('bot', reply);
+        }
+    } catch (err) {
+        if (thinkingEl && thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
+        showToast('AI', err.message || 'Something went wrong', 'error');
+    } finally {
+        if (sendBtn) sendBtn.disabled = false;
+    }
+}
+
+async function generateAiScript() {
+    const promptEl = document.getElementById('ai-script-prompt');
+    const preview = document.getElementById('ai-script-preview');
+    const applyBtn = document.getElementById('ai-script-apply');
+    const scenario = (promptEl && promptEl.value || '').trim();
+    if (!scenario) {
+        showToast('Script', 'Describe the conversation you want.', 'warning');
+        return;
+    }
+    const turns = parseInt(document.getElementById('ai-script-turns').value, 10) || 8;
+    const include_context = document.getElementById('ai-script-context').checked;
+    if (preview) preview.textContent = 'Generating…';
+    if (applyBtn) applyBtn.disabled = true;
+    aiScriptLines = null;
+    try {
+        const data = await aiJsonPost(AI_TRANSCRIPT_URL, {
+            scenario,
+            num_turns: turns,
+            include_context: include_context,
+        });
+        aiScriptLines = data.lines || [];
+        if (preview) {
+            preview.textContent = aiScriptLines.map(l => `${l.side === 'me' ? 'You' : 'Other'}: ${l.text}`).join('\n\n');
+        }
+        if (applyBtn) applyBtn.disabled = aiScriptLines.length < 1;
+    } catch (err) {
+        if (preview) preview.textContent = '';
+        showToast('Script', err.message || 'Generation failed', 'error');
+    }
+}
+
+async function applyAiScript() {
+    if (!aiScriptLines || !aiScriptLines.length) return;
+    if (!confirm(`Post ${aiScriptLines.length} messages to this chat? This counts toward your daily message limit.`)) return;
+    try {
+        await aiJsonPost(AI_APPLY_URL, { lines: aiScriptLines });
+        showToast('Posted', 'Script added to the chat.', 'success');
+        const res = await fetch('/api/quota/');
+        if (res.ok) {
+            const q = await res.json();
+            if (!q.is_pro) updateQuota(q.remaining);
+        }
+    } catch (err) {
+        showToast('Post failed', err.message || 'Could not post', 'error');
+    }
+}
+
+async function summarizeRoomAi() {
+    const out = document.getElementById('ai-summary-out');
+    if (out) out.textContent = 'Summarizing…';
+    try {
+        const data = await aiJsonPost(AI_SUMMARY_URL, {});
+        if (out) out.textContent = data.summary || '(empty)';
+    } catch (err) {
+        if (out) out.textContent = '';
+        showToast('Summary', err.message || 'Failed', 'error');
+    }
+}
+{% endif %}
 </script>
 {% endblock %}

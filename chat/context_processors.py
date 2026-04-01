@@ -4,8 +4,17 @@ from django.conf import settings
 
 def subscription_context(request):
     """Inject subscription and quota info into every template."""
+    FREE_LIMIT = getattr(settings, "FREE_MESSAGES_PER_DAY", 30)
+    gemini_on = bool((getattr(settings, "GEMINI_API_KEY", "") or "").strip())
+
     if not request.user.is_authenticated:
-        return {}
+        return {
+            "subscription": None,
+            "is_pro": False,
+            "remaining_messages": 0,
+            "free_limit": FREE_LIMIT,
+            "gemini_enabled": gemini_on,
+        }
 
     try:
         sub = request.user.subscription
@@ -13,8 +22,6 @@ def subscription_context(request):
     except Exception:
         is_pro = False
         sub = None
-
-    FREE_LIMIT = getattr(settings, 'FREE_MESSAGES_PER_DAY', 30)
 
     if not is_pro:
         from chat.models import DailyMessageCount
@@ -29,4 +36,5 @@ def subscription_context(request):
         'is_pro': is_pro,
         'remaining_messages': remaining,
         'free_limit': FREE_LIMIT,
+        'gemini_enabled': gemini_on,
     }

@@ -1,6 +1,7 @@
 from django.urls import path, reverse
 from django.shortcuts import redirect
 from . import views
+from . import ai_views
 from .webhooks import stripe_webhook
 
 
@@ -30,6 +31,12 @@ urlpatterns = [
     path('api/notifications/<uuid:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
     path('api/room/<uuid:room_id>/messages/', views.get_messages, name='get_messages'),
     path('api/quota/', views.get_quota, name='get_quota'),
+
+    # Gemini AI (requires GEMINI_API_KEY)
+    path('api/ai/assistant/', ai_views.ai_assistant, name='ai_assistant'),
+    path('api/room/<uuid:room_id>/ai/transcript/', ai_views.ai_transcript, name='ai_transcript'),
+    path('api/room/<uuid:room_id>/ai/apply-transcript/', ai_views.ai_apply_transcript, name='ai_apply_transcript'),
+    path('api/room/<uuid:room_id>/ai/summarize/', ai_views.ai_summarize_room, name='ai_summarize_room'),
 
     # Subscription
     path('subscribe/', views.subscription_page, name='subscription'),

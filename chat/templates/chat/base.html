@@ -208,6 +208,12 @@
         .modal-overlay.active .modal { transform: scale(1); }
         .modal h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
         .modal p { color: var(--text-secondary); margin-bottom: 24px; }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -215,6 +221,18 @@
     <div id="toast-container"></div>
     
     {% block content %}{% endblock %}
+
+    <!-- Logout Modal -->
+    <div class="modal-overlay" id="logout-modal" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="logout-modal-title">
+            <h2 id="logout-modal-title">Log out?</h2>
+            <p>You’ll be signed out of your account.</p>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost" id="logout-cancel-btn">Cancel</button>
+                <a class="btn btn-danger" id="logout-confirm-btn" href="{% url 'logout' %}">🚪 Logout</a>
+            </div>
+        </div>
+    </div>
 
     <script>
         // Toast notification system
@@ -246,6 +264,46 @@
             return v;
         }
         const CSRF = getCookie('csrftoken');
+
+        // Logout modal
+        (function initLogoutModal(){
+            const overlay = document.getElementById('logout-modal');
+            const cancelBtn = document.getElementById('logout-cancel-btn');
+            const confirmBtn = document.getElementById('logout-confirm-btn');
+            if (!overlay || !cancelBtn || !confirmBtn) return;
+
+            function open() {
+                overlay.classList.add('active');
+                overlay.setAttribute('aria-hidden', 'false');
+                cancelBtn.focus();
+                document.body.style.overflow = 'hidden';
+            }
+            function close() {
+                overlay.classList.remove('active');
+                overlay.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            }
+
+            cancelBtn.addEventListener('click', close);
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) close();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (!overlay.classList.contains('active')) return;
+                if (e.key === 'Escape') close();
+            });
+
+            document.addEventListener('click', (e) => {
+                const trigger = e.target.closest('a.js-logout');
+                if (!trigger) return;
+                e.preventDefault();
+                open();
+            });
+
+            // Expose for inline usage if needed
+            window.openLogoutModal = open;
+            window.closeLogoutModal = close;
+        })();
     </script>
     {% block extra_js %}{% endblock %}
 </body>

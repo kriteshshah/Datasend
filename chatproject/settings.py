@@ -212,6 +212,11 @@ MAX_DOC_SIZE_MB       = 25
 
 ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime']
+# ── Google Gemini (AI assistant & generated transcripts) ───────────────────────
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+# Default: 2.0 Flash is deprecated on the Gemini API; use 2.5 Flash (see ai.google.dev models doc).
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+
 ALLOWED_DOC_TYPES   = [
     'application/pdf',
     'application/msword',
