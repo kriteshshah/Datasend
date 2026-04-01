@@ -14,8 +14,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env.staging')
 
 # ── Security ──────────────────────────────────────────────────────────────────
-SECRET_KEY = os.getenv('SECRET_KEY')
-DEBUG = os.getenv('DEBUG')
+def _env_bool(name: str, default: bool = False) -> bool:
+    v = (os.getenv(name, "") or "").strip().lower()
+    if v in ("1", "true", "yes", "y", "on"):
+        return True
+    if v in ("0", "false", "no", "n", "off"):
+        return False
+    return default
+
+
+SECRET_KEY = (os.getenv("SECRET_KEY", "") or "").strip()
+if not SECRET_KEY:
+    raise RuntimeError(
+        "Missing SECRET_KEY environment variable. "
+        "Set it in your Render service Environment settings."
+    )
+
+DEBUG = _env_bool("DEBUG", default=False)
 ALLOWED_HOSTS = ['*']
 
 # Required for Django 4.x CSRF checks over HTTPS.
