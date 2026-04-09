@@ -232,6 +232,12 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 # Default: 2.0 Flash is deprecated on the Gemini API; use 2.5 Flash (see ai.google.dev models doc).
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
+# ── Groq (fallback when Gemini quota is exceeded) ─────────────────────────────
+# Get your API key from: https://console.groq.com  →  API Keys
+# Install SDK: pip install groq
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
 ALLOWED_DOC_TYPES   = [
     'application/pdf',
     'application/msword',
