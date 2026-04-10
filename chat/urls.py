@@ -12,7 +12,7 @@ from chat.ai_views import (
 )
 from chat.views import home, login_view, register_view, logout_view, room_view, create_room, upload_file, search_users, \
     notifications_list, mark_notification_read, get_messages, get_quota, subscription_page, create_checkout_session, \
-    subscription_success, cancel_subscription, manual_activate, profile_view, ws_check
+    subscription_success, cancel_subscription, manual_activate, profile_view, ws_check, gif_search
 from chat.webhooks import stripe_webhook
 
 
@@ -41,6 +41,7 @@ urlpatterns = [
     path('api/notifications/', notifications_list, name='notifications_list'),
     path('api/notifications/<uuid:notification_id>/read/', mark_notification_read, name='mark_notification_read'),
     path('api/room/<uuid:room_id>/messages/', get_messages, name='get_messages'),
+    path('api/gif/search/', gif_search, name='gif_search'),
     path('api/quota/', get_quota, name='get_quota'),
 
     # AI (GEMINI_API_KEY and/or GROQ_API_KEY via ai_service)

@@ -169,6 +169,7 @@ class Message(models.Model):
     TYPE_VIDEO = 'video'
     TYPE_DOC = 'doc'
     TYPE_EMOJI = 'emoji'
+    TYPE_GIF = 'gif'
     TYPE_SYSTEM = 'system'
     TYPE_CHOICES = [
         (TYPE_TEXT, 'Text'),
@@ -176,6 +177,7 @@ class Message(models.Model):
         (TYPE_VIDEO, 'Video'),
         (TYPE_DOC, 'Document'),
         (TYPE_EMOJI, 'Emoji Only'),
+        (TYPE_GIF, 'GIF'),
         (TYPE_SYSTEM, 'System'),
     ]
 
@@ -186,6 +188,7 @@ class Message(models.Model):
 
     # Content
     text = models.TextField(blank=True)
+    gif_url = models.URLField(max_length=2048, blank=True, help_text='External GIF (Tenor/Giphy CDN) when message_type is gif')
     image = models.ImageField(upload_to=upload_to_images, null=True, blank=True)
     video = models.FileField(upload_to=upload_to_videos, null=True, blank=True)
     document = models.FileField(upload_to=upload_to_docs, null=True, blank=True)

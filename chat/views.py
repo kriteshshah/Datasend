@@ -18,6 +18,9 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 import uuid
 
+from django.urls import reverse
+
+from .gif_providers import gif_picker_configured, search_gifs
 from .models import (
     Room, RoomMembership, Message, Notification, UserProfile,
     Subscription, DailyMessageCount, Reaction
@@ -119,19 +122,32 @@ def room_view(request, room_id):
     daily, _ = DailyMessageCount.objects.get_or_create(user=request.user, date=today)
     FREE_LIMIT = getattr(settings, 'FREE_MESSAGES_PER_DAY', 30)
     remaining  = max(0, FREE_LIMIT - daily.count)
-    members    = room.members.select_related('profile').all()
+    members = room.members.select_related('profile').all()
+    mention_members = [
+        {
+            "id": m.id,
+            "username": m.username,
+            "label": (m.get_full_name() or "").strip() or m.username,
+        }
+        for m in members
+        if m.id != request.user.id
+    ]
     context = {
-        'room': room,
-        'messages': messages,
-        'members': members,
-        'subscription': sub,
-        'remaining_messages': remaining,
-        'free_limit': FREE_LIMIT,
-        'is_pro': sub.is_pro,
-        'room_name': room.get_display_name(request.user),
-        'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
+        "room": room,
+        "messages": messages,
+        "members": members,
+        "mention_members": mention_members,
+        "is_group_room": room.room_type == Room.ROOM_GROUP,
+        "subscription": sub,
+        "remaining_messages": remaining,
+        "free_limit": FREE_LIMIT,
+        "is_pro": sub.is_pro,
+        "room_name": room.get_display_name(request.user),
+        "stripe_public_key": settings.STRIPE_PUBLIC_KEY,
+        "gif_picker_enabled": gif_picker_configured(),
+        "gif_search_url": reverse("gif_search"),
     }
-    return render(request, 'chat/room.html', context)
+    return render(request, "chat/room.html", context)
 
 
 @login_required
@@ -188,8 +204,18 @@ def upload_file(request, room_id):
     file = request.FILES.get('file')
     if not file:
         return JsonResponse({'error': 'No file provided'}, status=400)
-    content_type = file.content_type
-    file_size    = file.size
+    content_type = (file.content_type or "").strip().lower()
+    name_lower = (getattr(file, "name", "") or "").lower()
+    if not content_type or content_type == "application/octet-stream":
+        if name_lower.endswith(".gif"):
+            content_type = "image/gif"
+        elif name_lower.endswith((".jpg", ".jpeg")):
+            content_type = "image/jpeg"
+        elif name_lower.endswith(".png"):
+            content_type = "image/png"
+        elif name_lower.endswith(".webp"):
+            content_type = "image/webp"
+    file_size = file.size
     if content_type in settings.ALLOWED_IMAGE_TYPES:
         msg_type = 'image'
         max_size = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024
@@ -302,6 +328,45 @@ def mark_notification_read(request, notification_id):
 
 
 @login_required
+@require_GET
+def gif_search(request):
+    """Search Tenor/Giphy for GIFs (API keys on server only)."""
+    if not gif_picker_configured():
+        return JsonResponse(
+            {
+                "enabled": False,
+                "results": [],
+                "message": "Set GIPHY_API_KEY to enable GIF search (get a key at developers.giphy.com).",
+            }
+        )
+    q = request.GET.get("q", "").strip()
+    results, provider = search_gifs(q, 24)
+    return JsonResponse({"enabled": True, "provider": provider, "results": results})
+
+
+def _message_reply_json(msg):
+    if not getattr(msg, "reply_to_id", None):
+        return None
+    rt = msg.reply_to
+    if rt is None:
+        return None
+    preview = (rt.text or "")[:100] if rt.text else ""
+    if rt.message_type == Message.TYPE_GIF:
+        preview = "🎞️ GIF"
+    elif rt.message_type == Message.TYPE_IMAGE:
+        preview = "📷 Photo"
+    elif rt.message_type == Message.TYPE_VIDEO:
+        preview = "🎥 Video"
+    elif rt.message_type == Message.TYPE_DOC:
+        preview = rt.file_name or "📎 File"
+    return {
+        "id": str(rt.id),
+        "text": preview or "Message",
+        "sender": rt.sender.username,
+    }
+
+
+@login_required
 def get_messages(request, room_id):
     room = get_object_or_404(Room, id=room_id)
     if not room.members.filter(id=request.user.id).exists():
@@ -314,7 +379,9 @@ def get_messages(request, room_id):
             qs = qs.filter(created_at__lt=before_msg.created_at)
         except Message.DoesNotExist:
             pass
-    messages = qs.select_related('sender', 'sender__profile').order_by('-created_at')[:20]
+    messages = qs.select_related(
+        "sender", "sender__profile", "reply_to", "reply_to__sender"
+    ).order_by("-created_at")[:20]
     data = []
     for msg in reversed(list(messages)):
         try:
@@ -329,13 +396,27 @@ def get_messages(request, room_id):
             'timestamp': msg.created_at.strftime('%H:%M'),
             'is_own': msg.sender == request.user,
         }
-        if msg.image:    d['file_url'] = request.build_absolute_uri(msg.image.url)
-        elif msg.video:  d['file_url'] = request.build_absolute_uri(msg.video.url)
+        if msg.message_type == Message.TYPE_GIF and msg.gif_url:
+            d["type"] = "gif"
+            d["gif_url"] = msg.gif_url
+            d["file_name"] = "GIF"
+            d["mime_type"] = "image/gif"
+        elif msg.image:
+            d["file_url"] = request.build_absolute_uri(msg.image.url)
+            d["file_name"] = msg.file_name or ""
+            d["mime_type"] = msg.mime_type or ""
+        elif msg.video:
+            d["file_url"] = request.build_absolute_uri(msg.video.url)
+            d["file_name"] = msg.file_name or ""
+            d["mime_type"] = msg.mime_type or ""
         elif msg.document:
-            d['file_url']  = request.build_absolute_uri(msg.document.url)
-            d['file_name'] = msg.file_name
-            d['file_size'] = msg.get_file_size_display()
-            d['doc_icon']  = msg.get_doc_icon()
+            d["file_url"] = request.build_absolute_uri(msg.document.url)
+            d["file_name"] = msg.file_name
+            d["file_size"] = msg.get_file_size_display()
+            d["doc_icon"] = msg.get_doc_icon()
+        rj = _message_reply_json(msg)
+        if rj:
+            d["reply_to"] = rj
         data.append(d)
     return JsonResponse({'messages': data, 'has_more': len(data) == 20})
 

@@ -72,6 +72,7 @@
 /* Image bubble */
 .bubble.image-bubble { padding:4px; overflow:hidden; max-width:min(280px,100%); box-sizing:border-box; }
 .bubble.image-bubble img { width:100%; max-width:100%; border-radius:14px; display:block; cursor:pointer; }
+.bubble.image-bubble img.gif-media { object-fit:contain; max-height:min(320px,70vh); background:var(--bg-tertiary); }
 .img-caption { padding:6px 10px 4px; font-size:13px; }
 
 /* Video bubble */
@@ -135,14 +136,66 @@
 #msg-input { flex:1; min-width:0; background:transparent; border:none; color:var(--text-primary); font-size:14px; resize:none; max-height:120px; line-height:1.5; padding:4px 0; outline:none; font-family:'Sora',sans-serif; }
 #msg-input::placeholder { color:var(--text-muted); }
 .input-actions { display:flex; gap:6px; align-items:flex-end; }
-.attach-btn, .emoji-btn, .send-btn { width:36px; height:36px; border:none; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:18px; transition:all 0.2s; flex-shrink:0; }
-.attach-btn { background:transparent; color:var(--text-secondary); }
-.attach-btn:hover { background:var(--bg-hover); color:var(--text-primary); }
+.attach-btn, .gif-btn, .emoji-btn, .send-btn { width:36px; height:36px; border:none; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:18px; transition:all 0.2s; flex-shrink:0; }
+.attach-btn, .gif-btn { background:transparent; color:var(--text-secondary); }
+.attach-btn:hover, .gif-btn:hover { background:var(--bg-hover); color:var(--text-primary); }
+.gif-btn { font-size:15px; font-weight:700; }
 .emoji-btn { background:transparent; color:var(--text-secondary); }
 .emoji-btn:hover { background:var(--bg-hover); color:var(--text-primary); }
 .send-btn { background:var(--accent); color:#fff; box-shadow:0 0 16px var(--accent-glow); }
 .send-btn:hover { background:#7b74ff; transform:scale(1.05); }
 .send-btn:disabled { opacity:0.4; cursor:default; transform:none; }
+
+/* @mentions */
+.bubble .mention, .msg-text-body .mention {
+    color: var(--accent-2);
+    font-weight: 600;
+    background: rgba(108, 99, 255, 0.15);
+    padding: 0 4px;
+    border-radius: 4px;
+    cursor: default;
+}
+.msg-group.own .bubble .mention {
+    color: #fff;
+    background: rgba(255,255,255,0.2);
+}
+.mention-picker {
+    display: none;
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 100%;
+    margin-bottom: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    z-index: 50;
+}
+.mention-picker.open { display: block; }
+.mention-picker button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: 'Sora', sans-serif;
+    cursor: pointer;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+.mention-picker button:last-child { border-bottom: none; }
+.mention-picker button:hover, .mention-picker button.active {
+    background: var(--bg-hover);
+}
+.mention-picker .mp-name { font-weight: 600; }
+.mention-picker .mp-user { font-size: 11px; color: var(--text-muted); }
 
 /* Emoji picker */
 .emoji-picker { position:absolute; bottom:80px; right:12px; width:320px; max-width:calc(100% - 24px); background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:12px; box-shadow:var(--shadow-lg); z-index:100; display:none; box-sizing:border-box; }
@@ -155,6 +208,96 @@
 .emoji-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:4px; max-height:200px; overflow-y:auto; }
 .emoji-grid button { background:transparent; border:none; font-size:22px; cursor:pointer; padding:5px; border-radius:8px; transition:background 0.15s; }
 .emoji-grid button:hover { background:var(--bg-hover); }
+
+/* GIF strip above composer (Teams / WhatsApp style) */
+.gif-picker-bar {
+    display: none;
+    border-top: 1px solid var(--border);
+    background: var(--bg-secondary);
+    padding: 8px 10px 10px;
+    z-index: 30;
+}
+.gif-picker-bar.open { display: block; animation: fadeInUp 0.2s ease; }
+.gif-picker-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.gif-picker-toolbar input.gif-picker-search {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    padding: 7px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-family: inherit;
+}
+.gif-picker-close {
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 10px;
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 16px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+.gif-picker-close:hover { background: var(--border); }
+.gif-picker-strip {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px 2px 6px;
+    min-height: 74px;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+.gif-picker-strip::-webkit-scrollbar { height: 5px; }
+.gif-picker-strip::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.gif-picker-strip button {
+    flex: 0 0 auto;
+    width: 96px;
+    height: 72px;
+    border: none;
+    padding: 0;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--bg-tertiary);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.gif-picker-strip button:hover { transform: scale(1.03); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.gif-picker-strip button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gif-picker-strip button img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+}
+.gif-picker-strip-msg {
+    flex: 1 1 auto;
+    min-width: 120px;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 8px 12px;
+}
+.gif-picker-attrib {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-align: right;
+    padding: 2px 4px 0 0;
+    opacity: 0.85;
+}
+.gif-picker-attrib a { color: inherit; text-decoration: underline; }
 
 /* File preview */
 .file-preview-bar { padding:8px 16px; background:var(--bg-secondary); border-top:1px solid var(--border); display:none; align-items:center; gap:12px; }
@@ -374,13 +517,30 @@
                     {% if msg.reply_to %}
                     <div class="reply-quote">
                         <div class="reply-sender">↩ {{ msg.reply_to.sender.username }}</div>
-                        <div class="reply-text">{{ msg.reply_to.text|default:"📎 attachment"|truncatechars:80 }}</div>
+                        <div class="reply-text">
+                            {% if msg.reply_to.message_type == 'gif' %}🎞️ GIF
+                            {% elif msg.reply_to.message_type == 'image' %}📷 Photo
+                            {% elif msg.reply_to.message_type == 'video' %}🎥 Video
+                            {% elif msg.reply_to.message_type == 'doc' %}📎 {{ msg.reply_to.file_name }}
+                            {% else %}{{ msg.reply_to.text|default:"(message)"|truncatechars:80 }}{% endif %}
+                        </div>
                     </div>
                     {% endif %}
 
-                    {% if msg.message_type == 'image' %}
+                    {% if msg.message_type == 'gif' and msg.gif_url %}
                     <div class="bubble image-bubble" style="padding:4px;">
-                        <img src="{{ msg.image.url }}" alt="Photo" onclick="openLightbox('img','{{ msg.image.url }}')" loading="lazy">
+                        <img src="{{ msg.gif_url }}" alt="GIF" class="gif-media" onclick="openLightbox('img','{{ msg.gif_url|escapejs }}')" loading="lazy">
+                        <div class="msg-time">{{ msg.created_at|time:"H:i" }}</div>
+                        <div class="msg-actions">
+                            {% for e in "👍❤️😂😮😢" %}<span class="action-emoji" onclick="sendReaction('{{ msg.id }}','{{ e }}')">{{ e }}</span>{% endfor %}
+                            <span class="action-emoji" onclick="setReply('{{ msg.id }}','{{ msg.sender.username }}','🎞️ GIF')">↩</span>
+                            {% if msg.sender == request.user %}<span class="action-emoji" onclick="deleteMessage('{{ msg.id }}')">🗑️</span>{% endif %}
+                        </div>
+                    </div>
+
+                    {% elif msg.message_type == 'image' %}
+                    <div class="bubble image-bubble" style="padding:4px;">
+                        <img src="{{ msg.image.url }}" alt="{% if msg.mime_type == 'image/gif' or '.gif' in msg.file_name|default:''|lower %}GIF{% else %}Photo{% endif %}" class="{% if msg.mime_type == 'image/gif' or '.gif' in msg.file_name|default:''|lower %}gif-media{% endif %}" onclick="openLightbox('img','{{ msg.image.url }}')" loading="lazy">
                         {% if msg.text %}<div class="img-caption">{{ msg.text }}</div>{% endif %}
                         <div class="msg-time">{{ msg.created_at|time:"H:i" }}</div>
                         <div class="msg-actions">
@@ -414,7 +574,7 @@
 
                     {% else %}
                     <div class="bubble {% if msg.message_type == 'emoji' %}emoji-only{% endif %}">
-                        {{ msg.text }}
+                        <span class="msg-text-body">{% if msg.message_type == 'emoji' %}{{ msg.text }}{% else %}{{ msg.text|format_chat_mentions:mention_members }}{% endif %}</span>
                         <div class="msg-time">{{ msg.created_at|time:"H:i" }} {% if msg.sender == request.user %}✓{% endif %}</div>
                         <div class="msg-actions">
                             {% for e in "👍❤️😂😮😢" %}<span class="action-emoji" onclick="sendReaction('{{ msg.id }}','{{ e }}')">{{ e }}</span>{% endfor %}
@@ -464,6 +624,9 @@
 
         <!-- Input -->
         <div class="input-area" style="position:relative;">
+            {% if is_group_room %}
+            <div class="mention-picker" id="mention-picker" role="listbox" aria-label="Mention someone"></div>
+            {% endif %}
             <!-- Emoji Picker -->
             <div class="emoji-picker" id="emoji-picker">
                 <div class="emoji-search"><input type="text" placeholder="🔍 Search emoji..." id="emoji-search" oninput="filterEmojis(this.value)"></div>
@@ -471,13 +634,23 @@
                 <div class="emoji-grid" id="emoji-grid"></div>
             </div>
 
+            <div class="gif-picker-bar" id="gif-picker-bar" role="region" aria-label="GIF picker">
+                <div class="gif-picker-toolbar">
+                    <input type="search" class="gif-picker-search" id="gif-search-input" placeholder="Search GIFs…" autocomplete="off" aria-label="Search GIFs">
+                    <button type="button" class="gif-picker-close" onclick="closeGifPicker()" title="Close">✕</button>
+                </div>
+                <div class="gif-picker-strip" id="gif-picker-strip"></div>
+                <div class="gif-picker-attrib">Powered by <a href="https://giphy.com/" target="_blank" rel="noopener noreferrer">GIPHY</a></div>
+            </div>
+
             <div class="input-wrap">
                 <button class="emoji-btn" id="emoji-btn" onclick="toggleEmojiPicker()" title="Emoji">😊</button>
-                <label class="attach-btn" title="Attach file" style="cursor:pointer;">
+                <label class="attach-btn" title="Attach photo, video, or document" style="cursor:pointer;">
                     📎
                     <input type="file" id="file-input" style="display:none;" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" onchange="handleFileSelect(this)">
                 </label>
-                <textarea id="msg-input" placeholder="Type a message..." rows="1" onkeydown="handleKeydown(event)" oninput="handleTyping()"></textarea>
+                <button type="button" class="gif-btn" id="gif-picker-btn" title="GIF" onclick="openGifPicker()">GIF</button>
+                <textarea id="msg-input" placeholder="{% if is_group_room %}Message… @ to mention someone{% else %}Type a message…{% endif %}" rows="1" onkeydown="handleKeydown(event)" oninput="handleTyping()"></textarea>
                 <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
             </div>
         </div>
@@ -570,13 +743,23 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ mention_members|json_script:"mention-members-data" }}
 <script>
 const ROOM_ID = '{{ room.id }}';
 const MY_USER_ID = {{ request.user.id }};
 const MY_USERNAME = '{{ request.user.username }}';
+const IS_GROUP_ROOM = {{ is_group_room|yesno:"true,false" }};
+let MENTION_MEMBERS = [];
+try {
+    const _md = document.getElementById('mention-members-data');
+    if (_md) MENTION_MEMBERS = JSON.parse(_md.textContent);
+} catch (e) { MENTION_MEMBERS = []; }
 const IS_PRO = {{ is_pro|yesno:"true,false" }};
 let remainingMessages = {{ remaining_messages }};
 const FREE_LIMIT = {{ free_limit }};
+const GIF_SEARCH_URL = '{% url "gif_search" %}';
+const GIF_PICKER_ENABLED = {{ gif_picker_enabled|yesno:"true,false" }};
+let gifSearchTimer = null;
 
 // ─── Emoji Data ────────────────────────────────────────────────────────────────
 const EMOJI_DATA = {
@@ -619,6 +802,7 @@ function filterEmojis(q) {
 }
 
 function toggleEmojiPicker() {
+    closeGifPicker();
     document.getElementById('emoji-picker').classList.toggle('open');
 }
 function insertEmoji(e) {
@@ -626,14 +810,130 @@ function insertEmoji(e) {
     const pos = input.selectionStart;
     input.value = input.value.slice(0, pos) + e + input.value.slice(pos);
     input.focus();
-    // Close picker
     document.getElementById('emoji-picker').classList.remove('open');
+    closeGifPicker();
 }
 document.addEventListener('click', (e) => {
     if (!e.target.closest('#emoji-picker') && !e.target.closest('#emoji-btn')) {
         document.getElementById('emoji-picker').classList.remove('open');
     }
+    const gifBar = document.getElementById('gif-picker-bar');
+    if (
+        gifBar &&
+        gifBar.classList.contains('open') &&
+        !e.target.closest('#gif-picker-bar') &&
+        !e.target.closest('#gif-picker-btn')
+    ) {
+        closeGifPicker();
+    }
+    if (
+        IS_GROUP_ROOM &&
+        !e.target.closest('#mention-picker') &&
+        !e.target.closest('#msg-input')
+    ) {
+        closeMentionPicker();
+    }
 });
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeGifPicker();
+});
+
+function openGifPicker() {
+    if (!GIF_PICKER_ENABLED) {
+        showToast('GIF search unavailable', 'Set GIPHY_API_KEY on the server (developers.giphy.com) to enable GIFs.', 'warning');
+        return;
+    }
+    const bar = document.getElementById('gif-picker-bar');
+    const input = document.getElementById('gif-search-input');
+    document.getElementById('emoji-picker')?.classList.remove('open');
+    if (bar?.classList.contains('open')) {
+        closeGifPicker();
+        return;
+    }
+    if (bar) bar.classList.add('open');
+    if (input) {
+        input.value = '';
+        setTimeout(() => input.focus(), 50);
+    }
+    scheduleGifSearch('');
+}
+
+function closeGifPicker() {
+    const bar = document.getElementById('gif-picker-bar');
+    if (bar) bar.classList.remove('open');
+}
+
+function scheduleGifSearch(q) {
+    clearTimeout(gifSearchTimer);
+    gifSearchTimer = setTimeout(() => runGifSearch(q), 280);
+}
+
+function setGifStripMessage(text) {
+    const strip = document.getElementById('gif-picker-strip');
+    if (!strip) return;
+    strip.innerHTML = '';
+    const msg = document.createElement('div');
+    msg.className = 'gif-picker-strip-msg';
+    msg.textContent = text;
+    strip.appendChild(msg);
+}
+
+async function runGifSearch(q) {
+    const strip = document.getElementById('gif-picker-strip');
+    if (!strip) return;
+    setGifStripMessage('Loading…');
+
+    try {
+        const url = `${GIF_SEARCH_URL}?q=${encodeURIComponent(q || '')}`;
+        const res = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+        const data = await res.json();
+        if (!data.enabled) {
+            setGifStripMessage(data.message || 'GIF search is not configured.');
+            return;
+        }
+        const results = data.results || [];
+        if (!results.length) {
+            setGifStripMessage('No GIFs found. Try another search.');
+            return;
+        }
+        strip.innerHTML = '';
+        results.forEach((g) => {
+            if (!g.url) return;
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.title = (g.title || 'GIF').slice(0, 200);
+            const img = document.createElement('img');
+            img.src = g.preview || g.url;
+            img.alt = '';
+            img.loading = 'lazy';
+            img.referrerPolicy = 'no-referrer';
+            b.appendChild(img);
+            b.addEventListener('click', () => sendPickedGif(g.url));
+            strip.appendChild(b);
+        });
+    } catch (err) {
+        setGifStripMessage('Could not load GIFs.');
+    }
+}
+
+function sendPickedGif(url) {
+    if (!url) return;
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        showToast('Reconnecting…', 'Please wait a moment and try again.', 'warning');
+        return;
+    }
+    closeGifPicker();
+    socketSend({ action: 'send_gif', url, reply_to: replyToId });
+    clearReply();
+    stopTyping();
+}
+
+(function initGifSearchInput() {
+    const inp = document.getElementById('gif-search-input');
+    if (!inp) return;
+    inp.addEventListener('input', () => scheduleGifSearch(inp.value.trim()));
+})();
 
 // ─── WebSocket ─────────────────────────────────────────────────────────────────
 let socket;
@@ -675,6 +975,9 @@ function handleWSMessage(e) {
             break;
         case 'file_message':
             appendFileMessage(data);
+            if (!IS_PRO && data.sender_id === MY_USER_ID && typeof data.remaining_messages === 'number') {
+                updateQuota(data.remaining_messages);
+            }
             break;
         case 'typing':
             showTyping(data);
@@ -696,6 +999,7 @@ function handleWSMessage(e) {
 
 // ─── Message Sending ──────────────────────────────────────────────────────────
 function sendMessage() {
+    closeMentionPicker();
     const input = document.getElementById('msg-input');
     const text = input.value.trim();
 
@@ -723,7 +1027,137 @@ function sendMessage() {
     stopTyping();
 }
 
+let mentionState = { start: -1, filtered: [], activeIdx: 0 };
+
+function getMentionPicker() {
+    return document.getElementById('mention-picker');
+}
+
+function closeMentionPicker() {
+    const p = getMentionPicker();
+    if (!p) return;
+    p.classList.remove('open');
+    p.innerHTML = '';
+    mentionState = { start: -1, filtered: [], activeIdx: 0 };
+}
+
+function isMentionPickerOpen() {
+    const p = getMentionPicker();
+    return p && p.classList.contains('open');
+}
+
+function updateMentionPicker() {
+    if (!IS_GROUP_ROOM) return;
+    const input = document.getElementById('msg-input');
+    const picker = getMentionPicker();
+    if (!input || !picker) return;
+
+    const pos = input.selectionStart;
+    const v = input.value;
+    const before = v.slice(0, pos);
+    const at = before.lastIndexOf('@');
+    if (at < 0) {
+        closeMentionPicker();
+        return;
+    }
+    const prev = at > 0 ? before[at - 1] : ' ';
+    if (/[A-Za-z0-9_.@+-]/.test(prev)) {
+        closeMentionPicker();
+        return;
+    }
+    const afterAt = before.slice(at + 1);
+    if (/[\s\n]/.test(afterAt)) {
+        closeMentionPicker();
+        return;
+    }
+
+    const q = afterAt.toLowerCase();
+    const list = MENTION_MEMBERS.filter((m) => {
+        const un = (m.username || '').toLowerCase();
+        const lb = (m.label || '').toLowerCase();
+        return un.includes(q) || lb.includes(q);
+    }).slice(0, 8);
+
+    if (!list.length) {
+        closeMentionPicker();
+        return;
+    }
+
+    mentionState.start = at;
+    mentionState.filtered = list;
+    mentionState.activeIdx = 0;
+
+    picker.innerHTML = list
+        .map(
+            (m, i) =>
+                `<button type="button" role="option" data-i="${i}" class="${i === mentionState.activeIdx ? 'active' : ''}"><span class="mp-name">${escapeHTML(m.label)}</span><span class="mp-user">@${escapeHTML(m.username)}</span></button>`,
+        )
+        .join('');
+    picker.querySelectorAll('button').forEach((btn) => {
+        btn.addEventListener('mousedown', (ev) => {
+            ev.preventDefault();
+            insertMentionPick(parseInt(btn.getAttribute('data-i'), 10));
+        });
+    });
+    picker.classList.add('open');
+}
+
+function insertMentionPick(idx) {
+    const input = document.getElementById('msg-input');
+    const picker = getMentionPicker();
+    if (!input || !picker || !mentionState.filtered.length) return;
+    const m = mentionState.filtered[idx];
+    if (!m) return;
+
+    const pos = input.selectionStart;
+    const v = input.value;
+    const start = mentionState.start;
+    if (start < 0) return;
+
+    const un = m.username;
+    const insert = `@${un} `;
+    const newVal = v.slice(0, start) + insert + v.slice(pos);
+    input.value = newVal;
+    const newPos = start + insert.length;
+    input.setSelectionRange(newPos, newPos);
+    closeMentionPicker();
+    input.focus();
+}
+
+function renderMentionActive() {
+    const picker = getMentionPicker();
+    if (!picker) return;
+    picker.querySelectorAll('button').forEach((b, i) => {
+        b.classList.toggle('active', i === mentionState.activeIdx);
+    });
+}
+
 function handleKeydown(e) {
+    if (IS_GROUP_ROOM && isMentionPickerOpen()) {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            mentionState.activeIdx = (mentionState.activeIdx + 1) % mentionState.filtered.length;
+            renderMentionActive();
+            return;
+        }
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            mentionState.activeIdx =
+                (mentionState.activeIdx - 1 + mentionState.filtered.length) % mentionState.filtered.length;
+            renderMentionActive();
+            return;
+        }
+        if (e.key === 'Enter' || e.key === 'Tab') {
+            e.preventDefault();
+            insertMentionPick(mentionState.activeIdx);
+            return;
+        }
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeMentionPicker();
+            return;
+        }
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         sendMessage();
@@ -735,6 +1169,8 @@ function handleTyping() {
     // Auto-resize
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+
+    updateMentionPicker();
 
     if (!isTyping) {
         isTyping = true;
@@ -752,6 +1188,32 @@ function stopTyping() {
 }
 
 // ─── Append Messages ──────────────────────────────────────────────────────────
+function formatMessageWithMentions(text) {
+    const s = escapeHTML(text || '');
+    if (!MENTION_MEMBERS || !MENTION_MEMBERS.length) return s;
+    const map = new Map();
+    MENTION_MEMBERS.forEach((m) => {
+        if (m.username) map.set(String(m.username).toLowerCase(), m);
+    });
+    const re = /(?<![A-Za-z0-9_.@+-])@([A-Za-z0-9_.@+-]+)(?![A-Za-z0-9_.@+-])/g;
+    let out = '';
+    let last = 0;
+    let m;
+    while ((m = re.exec(s)) !== null) {
+        out += s.slice(last, m.index);
+        const u = map.get(m[1].toLowerCase());
+        if (u) {
+            const escUn = escapeHTML(u.username);
+            out += `<span class="mention" data-user-id="${u.id}" title="Mention">@${escUn}</span>`;
+        } else {
+            out += m[0];
+        }
+        last = re.lastIndex;
+    }
+    out += s.slice(last);
+    return out;
+}
+
 function getAvatarHTML(data, size='sm') {
     if (data.sender_avatar) {
         return `<div class="avatar ${size}"><img src="${data.sender_avatar}" alt=""></div>`;
@@ -766,10 +1228,14 @@ function appendMessage(data) {
 
     let replyHTML = '';
     if (data.reply_to) {
-        replyHTML = `<div class="reply-quote"><div class="reply-sender">↩ ${data.reply_to.sender}</div><div class="reply-text">${data.reply_to.text}</div></div>`;
+        replyHTML = `<div class="reply-quote"><div class="reply-sender">↩ ${escapeHTML(data.reply_to.sender)}</div><div class="reply-text">${escapeHTML(data.reply_to.text)}</div></div>`;
     }
 
     const isEmoji = /^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\s]+$/u.test(data.text.trim());
+    const textHtml =
+        isEmoji && data.text.length < 10
+            ? escapeHTML(data.text)
+            : `<span class="msg-text-body">${formatMessageWithMentions(data.text)}</span>`;
 
     const div = document.createElement('div');
     div.className = `msg-group ${isOwn ? 'own' : ''}`;
@@ -781,7 +1247,7 @@ function appendMessage(data) {
             ${!isOwn ? `<div class="msg-sender">${data.sender_username}</div>` : ''}
             ${replyHTML}
             <div class="bubble ${isEmoji && data.text.length < 10 ? 'emoji-only' : ''}">
-                ${escapeHTML(data.text)}
+                ${textHtml}
                 <div class="msg-time">${data.timestamp} ${isOwn ? '✓' : ''}</div>
                 <div class="msg-actions">
                     ${'👍❤️😂😮😢'.split('').map(e=>`<span class="action-emoji" onclick="sendReaction('${data.message_id}','${e}')">${e}</span>`).join('')}
@@ -796,31 +1262,61 @@ function appendMessage(data) {
     markRead();
 }
 
+function isGifMedia(mime, fileName) {
+    const m = (mime || '').toLowerCase();
+    const n = (fileName || '').toLowerCase();
+    return m === 'image/gif' || n.endsWith('.gif');
+}
+
+function replyHTMLFromData(rt) {
+    if (!rt) return '';
+    return `<div class="reply-quote"><div class="reply-sender">↩ ${escapeHTML(rt.sender)}</div><div class="reply-text">${escapeHTML(rt.text)}</div></div>`;
+}
+
 function appendFileMessage(data) {
     const isOwn = data.sender_id === MY_USER_ID;
     const wrap = document.getElementById('messages-wrap');
+    const replyHTML = replyHTMLFromData(data.reply_to);
 
     let bubbleContent = '';
-    if (data.message_type === 'image') {
+    if (data.message_type === 'gif' && data.gif_url) {
+        const src = escapeHTML(data.gif_url);
+        const lb = escapeAttr(data.gif_url);
+        bubbleContent = `
+            <div class="bubble image-bubble" style="padding:4px;">
+                <img src="${src}" alt="GIF" class="gif-media" onclick="openLightbox('img','${lb}')" loading="lazy">
+                <div class="msg-time">${data.timestamp}</div>
+                <div class="msg-actions">
+                    ${'👍❤️😂😮😢'.split('').map(e=>`<span class="action-emoji" onclick="sendReaction('${data.message_id}','${e}')">${e}</span>`).join('')}
+                    <span class="action-emoji" onclick="setReply('${data.message_id}','${escapeAttr(data.sender_username)}','🎞️ GIF')">↩</span>
+                    ${isOwn ? `<span class="action-emoji" onclick="deleteMessage('${data.message_id}')">🗑️</span>` : ''}
+                </div>
+            </div>`;
+    } else if (data.message_type === 'image') {
+        const gifAttr = isGifMedia(data.mime_type, data.file_name) ? ' class="gif-media"' : '';
+        const fu = escapeHTML(data.file_url);
+        const flb = escapeAttr(data.file_url);
         bubbleContent = `
             <div class="bubble image-bubble">
-                <img src="${data.file_url}" alt="${escapeHTML(data.file_name)}" onclick="openLightbox('img','${data.file_url}')" loading="lazy">
+                <img src="${fu}" alt="${escapeHTML(data.file_name)}"${gifAttr} onclick="openLightbox('img','${flb}')" loading="lazy">
                 ${data.caption ? `<div class="img-caption">${escapeHTML(data.caption)}</div>` : ''}
                 <div class="msg-time">${data.timestamp}</div>
                 <div class="msg-actions">${'👍❤️😂😮😢'.split('').map(e=>`<span class="action-emoji" onclick="sendReaction('${data.message_id}','${e}')">${e}</span>`).join('')}</div>
             </div>`;
     } else if (data.message_type === 'video') {
+        const vu = escapeHTML(data.file_url);
         bubbleContent = `
             <div class="bubble video-bubble">
-                <video src="${data.file_url}" controls preload="metadata"></video>
+                <video src="${vu}" controls preload="metadata"></video>
                 <div class="msg-time" style="padding:4px 10px 6px;">${data.timestamp}</div>
             </div>`;
     } else {
+        const du = escapeHTML(data.file_url);
         bubbleContent = `
             <div class="bubble doc-bubble">
                 <div class="doc-icon-wrap">${data.doc_icon || '📎'}</div>
-                <div class="doc-info"><div class="doc-name">${escapeHTML(data.file_name)}</div><div class="doc-size">${data.file_size}</div></div>
-                <a href="${data.file_url}" download class="doc-dl">⬇️</a>
+                <div class="doc-info"><div class="doc-name">${escapeHTML(data.file_name)}</div><div class="doc-size">${escapeHTML(data.file_size || '')}</div></div>
+                <a href="${du}" download class="doc-dl">⬇️</a>
             </div>`;
     }
 
@@ -831,11 +1327,13 @@ function appendFileMessage(data) {
     div.innerHTML = `
         ${!isOwn ? getAvatarHTML(data) : ''}
         <div class="msg-bubbles">
-            ${!isOwn ? `<div class="msg-sender">${data.sender_username}</div>` : ''}
+            ${!isOwn ? `<div class="msg-sender">${escapeHTML(data.sender_username)}</div>` : ''}
+            ${replyHTML}
             ${bubbleContent}
         </div>`;
     wrap.appendChild(div);
     scrollToBottom();
+    markRead();
 }
 
 // ─── File Upload ──────────────────────────────────────────────────────────────
@@ -845,6 +1343,7 @@ function handleFileSelect(input) {
 
     const MAX_SIZES = { 'image': 10, 'video': 100, 'doc': 25 };
     let type = 'doc';
+    const lowerName = (file.name || '').toLowerCase();
     if (file.type.startsWith('image/')) type = 'image';
     else if (file.type.startsWith('video/')) type = 'video';
 
@@ -881,7 +1380,8 @@ function showFilePreview(file, type) {
 function clearFile() {
     pendingFile = null;
     document.getElementById('file-preview-bar').classList.remove('active');
-    document.getElementById('file-input').value = '';
+    const fi = document.getElementById('file-input');
+    if (fi) fi.value = '';
     document.getElementById('file-preview-img').src = '';
 }
 
@@ -1079,22 +1579,37 @@ function buildMessageEl(msg) {
     div.id = `msg-${msg.id}`;
     div.dataset.id = msg.id;
 
+    const replyHTML = replyHTMLFromData(msg.reply_to);
+
     let content = '';
-    if (msg.type === 'image') {
-        content = `<div class="bubble image-bubble"><img src="${msg.file_url}" onclick="openLightbox('img','${msg.file_url}')" loading="lazy"><div class="msg-time">${msg.timestamp}</div></div>`;
+    if (msg.type === 'gif' && msg.gif_url) {
+        const src = escapeHTML(msg.gif_url);
+        const lb = escapeAttr(msg.gif_url);
+        const del = msg.is_own
+            ? `<span class="action-emoji" onclick="deleteMessage('${msg.id}')">🗑️</span>`
+            : '';
+        content = `<div class="bubble image-bubble" style="padding:4px;"><img src="${src}" alt="GIF" class="gif-media" onclick="openLightbox('img','${lb}')" loading="lazy"><div class="msg-time">${msg.timestamp}</div><div class="msg-actions">${'👍❤️😂😮😢'.split('').map(e=>`<span class="action-emoji" onclick="sendReaction('${msg.id}','${e}')">${e}</span>`).join('')}<span class="action-emoji" onclick="setReply('${msg.id}','${escapeAttr(msg.sender_username)}','🎞️ GIF')">↩</span>${del}</div></div>`;
+    } else if (msg.type === 'image') {
+        const gCls = isGifMedia(msg.mime_type, msg.file_name) ? ' class="gif-media"' : '';
+        const fu = escapeHTML(msg.file_url);
+        const flb = escapeAttr(msg.file_url);
+        content = `<div class="bubble image-bubble"><img src="${fu}"${gCls} onclick="openLightbox('img','${flb}')" loading="lazy"><div class="msg-time">${msg.timestamp}</div></div>`;
     } else if (msg.type === 'video') {
-        content = `<div class="bubble video-bubble"><video src="${msg.file_url}" controls preload="metadata"></video><div class="msg-time">${msg.timestamp}</div></div>`;
+        const vu = escapeHTML(msg.file_url);
+        content = `<div class="bubble video-bubble"><video src="${vu}" controls preload="metadata"></video><div class="msg-time">${msg.timestamp}</div></div>`;
     } else if (msg.type === 'doc') {
-        content = `<div class="bubble doc-bubble"><div class="doc-icon-wrap">${msg.doc_icon}</div><div class="doc-info"><div class="doc-name">${escapeHTML(msg.file_name)}</div><div class="doc-size">${msg.file_size}</div></div><a href="${msg.file_url}" download class="doc-dl">⬇️</a></div>`;
+        const du = escapeHTML(msg.file_url);
+        content = `<div class="bubble doc-bubble"><div class="doc-icon-wrap">${msg.doc_icon}</div><div class="doc-info"><div class="doc-name">${escapeHTML(msg.file_name)}</div><div class="doc-size">${escapeHTML(msg.file_size || '')}</div></div><a href="${du}" download class="doc-dl">⬇️</a></div>`;
     } else {
-        content = `<div class="bubble"><div>${escapeHTML(msg.text)}</div><div class="msg-time">${msg.timestamp}</div></div>`;
+        content = `<div class="bubble"><div class="msg-text-body">${formatMessageWithMentions(msg.text)}</div><div class="msg-time">${msg.timestamp}</div></div>`;
     }
 
-    const avatar = `<div class="avatar av-purple sm">${msg.sender_initials}</div>`;
+    const avatar = `<div class="avatar av-purple sm">${escapeHTML(msg.sender_initials)}</div>`;
     div.innerHTML = `
         ${!msg.is_own ? avatar : ''}
         <div class="msg-bubbles">
-            ${!msg.is_own ? `<div class="msg-sender">${msg.sender_username}</div>` : ''}
+            ${!msg.is_own ? `<div class="msg-sender">${escapeHTML(msg.sender_username)}</div>` : ''}
+            ${replyHTML}
             ${content}
         </div>`;
     return div;

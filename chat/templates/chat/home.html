@@ -142,7 +142,8 @@
                     <div class="room-name">{{ room|get_display_name:request.user }}</div>
                     <div class="room-preview">
                         {% if last_msg %}
-                            {% if last_msg.message_type == 'image' %}📷 Photo
+                            {% if last_msg.message_type == 'gif' %}🎞️ GIF
+                            {% elif last_msg.message_type == 'image' %}{% if last_msg.mime_type == 'image/gif' or '.gif' in last_msg.file_name|default:''|lower %}🎞️ GIF{% else %}📷 Photo{% endif %}
                             {% elif last_msg.message_type == 'video' %}🎥 Video
                             {% elif last_msg.message_type == 'doc' %}📎 {{ last_msg.file_name }}
                             {% else %}{{ last_msg.text|truncatechars:40 }}{% endif %}

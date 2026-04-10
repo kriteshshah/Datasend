@@ -238,6 +238,14 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
+# ── GIF picker (Tenor and/or Giphy — like WhatsApp / Teams) ───────────────────
+# GIF picker: Giphy is the default provider (Tenor optional fallback for existing keys).
+# https://developers.giphy.com/docs/api/
+GIPHY_API_KEY = os.getenv("GIPHY_API_KEY", "").strip()
+# Tenor (optional; Google often restricts new API access)
+TENOR_API_KEY = os.getenv("TENOR_API_KEY", "").strip()
+TENOR_CLIENT_KEY = os.getenv("TENOR_CLIENT_KEY", "spark_chat").strip() or "spark_chat"
+
 ALLOWED_DOC_TYPES   = [
     'application/pdf',
     'application/msword',

@@ -81,6 +81,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         handlers = {
             'send_message': self.handle_send_message,
+            'send_gif': self.handle_send_gif,
             'typing': self.handle_typing,
             'mark_read': self.handle_mark_read,
             'delete_message': self.handle_delete_message,
@@ -140,6 +141,49 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         # Send notification to offline members
         await self.send_message_notifications(str(message['id']), text)
+
+    async def handle_send_gif(self, data):
+        from .gif_providers import is_allowed_gif_cdn_url
+
+        gif_url = (data.get('url') or '').strip()[:2048]
+        reply_to_id = data.get('reply_to')
+        if not gif_url or not is_allowed_gif_cdn_url(gif_url):
+            return
+
+        can_send, remaining = await self.check_message_quota()
+        if not can_send:
+            await self.send(text_data=json.dumps({
+                'type': 'quota_exceeded',
+                'message': 'You have reached your daily free message limit (30 messages). Upgrade to Pro for unlimited messaging!',
+                'upgrade_url': '/subscribe/'
+            }))
+            return
+
+        message = await self.save_gif_message(gif_url, reply_to_id)
+        await self.increment_message_count()
+
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'file_message',
+                'message_id': str(message['id']),
+                'message_type': 'gif',
+                'gif_url': gif_url,
+                'file_name': 'GIF',
+                'file_size': '',
+                'mime_type': 'image/gif',
+                'caption': '',
+                'doc_icon': '🎞️',
+                'sender_id': self.user.id,
+                'sender_username': self.user.username,
+                'sender_avatar': message['sender_avatar'],
+                'sender_initials': message['sender_initials'],
+                'reply_to': message.get('reply_to'),
+                'timestamp': message['timestamp'],
+                'remaining_messages': remaining - 1,
+            }
+        )
+        await self.send_message_notifications(str(message['id']), 'GIF')
 
     async def handle_typing(self, data):
         """Broadcast typing indicator"""
@@ -335,9 +379,71 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'sender_initials': initials,
         }
         if reply_to:
+            preview = reply_to.text[:100] if reply_to.text else ''
+            if reply_to.message_type == Message.TYPE_GIF:
+                preview = '🎞️ GIF'
+            elif reply_to.message_type == Message.TYPE_IMAGE:
+                preview = '📷 Photo'
+            elif reply_to.message_type == Message.TYPE_VIDEO:
+                preview = '🎥 Video'
+            elif reply_to.message_type == Message.TYPE_DOC:
+                preview = reply_to.file_name or '📎 File'
             result['reply_to'] = {
                 'id': str(reply_to.id),
-                'text': reply_to.text[:100],
+                'text': preview or 'Message',
+                'sender': reply_to.sender.username,
+            }
+        return result
+
+    @database_sync_to_async
+    def save_gif_message(self, gif_url, reply_to_id=None):
+        from .models import Message, Room
+
+        room = Room.objects.get(id=self.room_id)
+        reply_to = None
+        if reply_to_id:
+            try:
+                reply_to = Message.objects.get(id=reply_to_id)
+            except Message.DoesNotExist:
+                pass
+
+        msg = Message.objects.create(
+            room=room,
+            sender=self.user,
+            message_type=Message.TYPE_GIF,
+            gif_url=gif_url[:2048],
+            file_name='GIF',
+            mime_type='image/gif',
+            reply_to=reply_to,
+        )
+
+        try:
+            profile = self.user.profile
+            avatar = profile.avatar.url if profile.avatar else None
+            initials = profile.get_initials()
+        except Exception:
+            avatar = None
+            initials = self.user.username[:2].upper()
+
+        result = {
+            'id': str(msg.id),
+            'timestamp': msg.created_at.strftime('%H:%M'),
+            'sender_avatar': avatar,
+            'sender_initials': initials,
+        }
+        if reply_to:
+            preview = reply_to.text[:100] if reply_to.text else ''
+            if reply_to.message_type == Message.TYPE_GIF:
+                preview = '🎞️ GIF'
+            elif reply_to.message_type == Message.TYPE_IMAGE:
+                preview = '📷 Photo'
+            elif reply_to.message_type == Message.TYPE_VIDEO:
+                preview = '🎥 Video'
+            elif reply_to.message_type == Message.TYPE_DOC:
+                preview = reply_to.file_name or '📎 File'
+            result['reply_to'] = {
+                'id': str(reply_to.id),
+                'text': preview or 'Message',
                 'sender': reply_to.sender.username,
             }
         return result

@@ -22,7 +22,8 @@
         <div class="reply-quote">
             <div class="reply-sender">↩ {{ message.reply_to.sender.username }}</div>
             <div class="reply-text">
-                {% if message.reply_to.message_type == 'image' %}📷 Photo
+                {% if message.reply_to.message_type == 'gif' %}🎞️ GIF
+                {% elif message.reply_to.message_type == 'image' %}📷 Photo
                 {% elif message.reply_to.message_type == 'video' %}🎥 Video
                 {% elif message.reply_to.message_type == 'doc' %}📎 {{ message.reply_to.file_name }}
                 {% else %}{{ message.reply_to.text|default:"(message)"|truncatechars:80 }}
@@ -31,10 +32,30 @@
         </div>
         {% endif %}
 
-        {% if message.message_type == 'image' and message.image %}
+        {% if message.message_type == 'gif' and message.gif_url %}
+            <div class="bubble image-bubble" style="padding:4px;">
+                <img src="{{ message.gif_url }}" alt="GIF" class="gif-media"
+                     onclick="openLightbox('img','{{ message.gif_url|escapejs }}')" loading="lazy">
+                <div class="msg-time">
+                    {{ message.created_at|time:"H:i" }}
+                    {% if message.sender == user %}✓{% endif %}
+                </div>
+                <div class="msg-actions">
+                    {% for emoji in "👍❤️😂😮😢" %}
+                    <span class="action-emoji" onclick="sendReaction('{{ message.id }}','{{ emoji }}')">{{ emoji }}</span>
+                    {% endfor %}
+                    <span class="action-emoji" onclick="setReply('{{ message.id }}','{{ message.sender.username }}','🎞️ GIF')">↩</span>
+                    {% if message.sender == user %}
+                    <span class="action-emoji" onclick="deleteMessage('{{ message.id }}')">🗑️</span>
+                    {% endif %}
+                </div>
+            </div>
+
+        {% elif message.message_type == 'image' and message.image %}
             <div class="bubble image-bubble">
-                <img src="{{ message.image.url }}" 
-                     alt="Photo" 
+                <img src="{{ message.image.url }}"
+                     alt="{% if message.mime_type == 'image/gif' or '.gif' in message.file_name|default:''|lower %}GIF{% else %}Photo{% endif %}"
+                     class="{% if message.mime_type == 'image/gif' or '.gif' in message.file_name|default:''|lower %}gif-media{% endif %}"
                      onclick="openLightbox('img','{{ message.image.url }}')"
                      loading="lazy">
                 {% if message.text %}<div class="img-caption">{{ message.text }}</div>{% endif %}

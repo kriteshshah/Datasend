@@ -218,11 +218,13 @@
             flex-wrap: wrap;
         }
 
-        /* AI code project generator (floating) */
+        /* AI code project generator (floating, draggable) */
         .ai-project-fab {
             position: fixed;
-            bottom: 22px;
             right: 22px;
+            bottom: 22px;
+            left: auto;
+            top: auto;
             width: 56px;
             height: 56px;
             border-radius: 50%;
@@ -231,20 +233,34 @@
             color: #fff;
             font-size: 26px;
             line-height: 1;
-            cursor: pointer;
+            cursor: grab;
             z-index: 961;
             box-shadow: var(--shadow-lg);
             display: flex;
             align-items: center;
             justify-content: center;
             transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
         }
         .ai-project-fab:hover { transform: scale(1.06); box-shadow: 0 12px 40px rgba(108, 99, 255, 0.35); }
-        .ai-project-fab:active { transform: scale(0.98); }
+        .ai-project-fab:active { cursor: grabbing; }
+        .ai-project-fab.is-dragging {
+            cursor: grabbing;
+            transition: none;
+            transform: none;
+            box-shadow: 0 12px 40px rgba(108, 99, 255, 0.35);
+        }
+        .ai-project-fab.is-dragging:hover { transform: none; }
+        .ai-project-fab.is-concealed {
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s, box-shadow 0.2s;
+        }
         .ai-project-panel {
             position: fixed;
-            bottom: 90px;
-            right: 22px;
             width: 400px;
             max-width: calc(100vw - 32px);
             height: min(720px, calc(100vh - 80px));
@@ -585,12 +601,8 @@
         }
         @media (max-width: 480px) {
             .ai-project-panel {
-                left: 12px;
-                right: 12px;
-                width: auto;
-                bottom: 86px;
+                max-width: none;
             }
-            .ai-project-fab { right: 16px; bottom: 16px; }
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -677,7 +689,7 @@
             </div>
         </div>
     </div>
-    <button type="button" class="ai-project-fab" id="ai-project-fab" title="AI assistant" aria-label="Open AI assistant" aria-expanded="false">✨</button>
+    <button type="button" class="ai-project-fab" id="ai-project-fab" title="Drag to move · Click to open AI assistant" aria-label="Open AI assistant" aria-expanded="false">✨</button>
     {% endif %}
     {% endif %}
 
@@ -834,6 +846,128 @@
                 if (s === '1') includeCodeEl.checked = true;
                 else if (s === '0') includeCodeEl.checked = false;
             } catch (e) { /* ignore */ }
+
+            const LS_FAB_POS = 'datasend_ai_fab_pos';
+
+            function clampFabPos(x, y) {
+                const w = fab.offsetWidth || 56;
+                const h = fab.offsetHeight || 56;
+                const pad = 8;
+                return {
+                    x: Math.min(Math.max(pad, x), window.innerWidth - w - pad),
+                    y: Math.min(Math.max(pad, y), window.innerHeight - h - pad),
+                };
+            }
+
+            function applyFabPos(x, y, persist) {
+                const p = clampFabPos(x, y);
+                fab.style.left = `${p.x}px`;
+                fab.style.top = `${p.y}px`;
+                fab.style.right = 'auto';
+                fab.style.bottom = 'auto';
+                if (persist) {
+                    try {
+                        localStorage.setItem(LS_FAB_POS, JSON.stringify(p));
+                    } catch (e) { /* ignore */ }
+                }
+                if (panel.classList.contains('open')) {
+                    syncPanelToFab();
+                }
+            }
+
+            function loadFabPos() {
+                try {
+                    const raw = localStorage.getItem(LS_FAB_POS);
+                    if (raw) {
+                        const p = JSON.parse(raw);
+                        if (typeof p.x === 'number' && typeof p.y === 'number') {
+                            applyFabPos(p.x, p.y, true);
+                            return;
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+                const w = fab.offsetWidth || 56;
+                const h = fab.offsetHeight || 56;
+                applyFabPos(window.innerWidth - 22 - w, window.innerHeight - 22 - h, false);
+            }
+
+            function syncPanelToFab() {
+                const fr = fab.getBoundingClientRect();
+                const narrow = window.innerWidth <= 480;
+                const gap = 10;
+                const pw = narrow
+                    ? window.innerWidth - 24
+                    : Math.min(400, window.innerWidth - 24);
+                panel.style.width = narrow ? 'auto' : `${pw}px`;
+                panel.style.left = narrow ? '12px' : `${Math.max(8, Math.min(fr.right - pw, window.innerWidth - pw - 8))}px`;
+                panel.style.right = narrow ? '12px' : 'auto';
+                panel.style.bottom = 'auto';
+                const ph = panel.offsetHeight || Math.min(720, window.innerHeight - 80);
+                let top = fr.top - ph - gap;
+                if (top < 8) {
+                    top = fr.bottom + gap;
+                }
+                top = Math.max(8, Math.min(top, window.innerHeight - ph - 8));
+                panel.style.top = `${top}px`;
+            }
+
+            let fabDrag = null;
+            let fabSuppressClick = false;
+
+            fab.addEventListener('pointerdown', (e) => {
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                const r = fab.getBoundingClientRect();
+                fabDrag = {
+                    px: e.clientX,
+                    py: e.clientY,
+                    sx: r.left,
+                    sy: r.top,
+                    moved: false,
+                };
+                fab.classList.add('is-dragging');
+                try {
+                    fab.setPointerCapture(e.pointerId);
+                } catch (err) { /* ignore */ }
+            });
+
+            fab.addEventListener('pointermove', (e) => {
+                if (!fabDrag) return;
+                const dx = e.clientX - fabDrag.px;
+                const dy = e.clientY - fabDrag.py;
+                if (Math.abs(dx) > 5 || Math.abs(dy) > 5) fabDrag.moved = true;
+                if (fabDrag.moved) {
+                    applyFabPos(fabDrag.sx + dx, fabDrag.sy + dy, false);
+                }
+            });
+
+            function endFabDrag(e) {
+                if (!fabDrag) return;
+                if (fabDrag.moved) {
+                    fabSuppressClick = true;
+                    const r = fab.getBoundingClientRect();
+                    applyFabPos(r.left, r.top, true);
+                }
+                fabDrag = null;
+                fab.classList.remove('is-dragging');
+                if (e && e.pointerId != null) {
+                    try {
+                        fab.releasePointerCapture(e.pointerId);
+                    } catch (err) { /* ignore */ }
+                }
+            }
+
+            fab.addEventListener('pointerup', endFabDrag);
+            fab.addEventListener('pointercancel', endFabDrag);
+
+            window.addEventListener('resize', () => {
+                const r = fab.getBoundingClientRect();
+                applyFabPos(r.left, r.top, true);
+                if (panel.classList.contains('open')) {
+                    requestAnimationFrame(syncPanelToFab);
+                }
+            });
+
+            loadFabPos();
 
             let chatMessages = [];
             let lastBundle = null;
@@ -1216,20 +1350,35 @@
             }
 
             function openPanel() {
+                fab.classList.add('is-concealed');
+                fab.setAttribute('aria-hidden', 'true');
                 panel.classList.add('open');
                 panel.setAttribute('aria-hidden', 'false');
                 fab.setAttribute('aria-expanded', 'true');
                 syncModeUi();
-                inputEl.focus();
+                requestAnimationFrame(() => {
+                    syncPanelToFab();
+                    requestAnimationFrame(() => {
+                        syncPanelToFab();
+                        inputEl.focus();
+                    });
+                });
             }
 
             function closePanel() {
                 panel.classList.remove('open');
                 panel.setAttribute('aria-hidden', 'true');
                 fab.setAttribute('aria-expanded', 'false');
+                fab.classList.remove('is-concealed');
+                fab.setAttribute('aria-hidden', 'false');
             }
 
-            fab.addEventListener('click', () => {
+            fab.addEventListener('click', (e) => {
+                if (fabSuppressClick) {
+                    e.preventDefault();
+                    fabSuppressClick = false;
+                    return;
+                }
                 if (panel.classList.contains('open')) closePanel();
                 else openPanel();
             });
