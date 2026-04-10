@@ -981,10 +981,14 @@ function handleMessageDeleted(data) {
     }
 }
 
-function deleteMessage(msgId) {
-    if (confirm('Delete this message?')) {
-        socketSend({action: 'delete_message', message_id: msgId});
-    }
+async function deleteMessage(msgId) {
+    const ok = await openConfirmModal({
+        title: 'Delete message?',
+        message: 'This cannot be undone.',
+        confirmText: 'Delete',
+        danger: true,
+    });
+    if (ok) socketSend({action: 'delete_message', message_id: msgId});
 }
 
 function setReply(msgId, sender, text) {
@@ -1324,7 +1328,12 @@ async function generateAiScript() {
 
 async function applyAiScript() {
     if (!aiScriptLines || !aiScriptLines.length) return;
-    if (!confirm(`Post ${aiScriptLines.length} messages to this chat? This counts toward your daily message limit.`)) return;
+    const ok = await openConfirmModal({
+        title: 'Post script to chat?',
+        message: `Post ${aiScriptLines.length} messages to this chat? This counts toward your daily message limit.`,
+        confirmText: 'Post messages',
+    });
+    if (!ok) return;
     try {
         await aiJsonPost(AI_APPLY_URL, { lines: aiScriptLines });
         showToast('Posted', 'Script added to the chat.', 'success');

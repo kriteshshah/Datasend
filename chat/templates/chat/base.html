@@ -191,6 +191,9 @@
             pointer-events: none;
             transition: opacity 0.2s;
         }
+        .modal-overlay.confirm-layer {
+            z-index: 1002;
+        }
         .modal-overlay.active {
             opacity: 1;
             pointer-events: all;
@@ -214,6 +217,381 @@
             justify-content: flex-end;
             flex-wrap: wrap;
         }
+
+        /* AI code project generator (floating) */
+        .ai-project-fab {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 1px solid var(--border-light);
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            color: #fff;
+            font-size: 26px;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 961;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .ai-project-fab:hover { transform: scale(1.06); box-shadow: 0 12px 40px rgba(108, 99, 255, 0.35); }
+        .ai-project-fab:active { transform: scale(0.98); }
+        .ai-project-panel {
+            position: fixed;
+            bottom: 90px;
+            right: 22px;
+            width: 400px;
+            max-width: calc(100vw - 32px);
+            height: min(720px, calc(100vh - 80px));
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            z-index: 960;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(12px) scale(0.98);
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .ai-project-panel.open {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateY(0) scale(1);
+        }
+        .ai-project-panel-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: var(--bg-secondary);
+            flex-shrink: 0;
+        }
+        .ai-project-panel-header h3 {
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .ai-project-panel-header .ai-project-header-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .ai-project-panel-header button.icon-only {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ai-project-panel-header button.icon-only:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        .ai-codegen-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px 16px;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .ai-panel-subtitle {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin: 2px 0 0;
+            line-height: 1.35;
+        }
+        .ai-codegen-hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin: 0;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+        }
+        .ai-codegen-mode-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            cursor: pointer;
+            user-select: none;
+        }
+        .ai-codegen-mode-row:hover {
+            border-color: var(--border-light);
+        }
+        .ai-codegen-mode-row input {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            flex-shrink: 0;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+        .ai-codegen-mode-row .mode-copy {
+            flex: 1;
+            min-width: 0;
+        }
+        .ai-codegen-mode-row .mode-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 2px;
+        }
+        .ai-codegen-mode-row .mode-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.45;
+            margin: 0;
+        }
+        .ai-codegen-field label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .ai-codegen-field select {
+            width: 100%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: 'Sora', sans-serif;
+            font-size: 13px;
+            padding: 10px 12px;
+        }
+        .ai-codegen-field textarea#ai-codegen-prompt {
+            min-height: 88px;
+            max-height: 160px;
+            resize: vertical;
+            font-size: 13px;
+        }
+        .ai-codegen-chat {
+            flex: 1;
+            min-height: 200px;
+            max-height: min(320px, 42vh);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg-primary);
+        }
+        .ai-codegen-bubble {
+            max-width: 94%;
+            padding: 10px 12px;
+            border-radius: var(--radius);
+            font-size: 13px;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+        .ai-codegen-bubble.user {
+            align-self: flex-end;
+            white-space: pre-wrap;
+            background: linear-gradient(135deg, rgba(108,99,255,0.28), rgba(167,139,250,0.12));
+            border: 1px solid var(--border-light);
+        }
+        .ai-codegen-bubble.assistant {
+            align-self: flex-start;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+        }
+        .ai-codegen-bubble.assistant .bubble-body {
+            font-size: 13px;
+            line-height: 1.55;
+        }
+        .ai-codegen-bubble.assistant .ai-md-prose {
+            margin: 0 0 8px;
+        }
+        .ai-codegen-bubble.assistant .ai-md-prose:last-child {
+            margin-bottom: 0;
+        }
+        .ai-codegen-bubble.assistant .ai-md-code-wrap {
+            margin: 8px 0;
+        }
+        .ai-codegen-bubble.assistant .ai-md-code-wrap:first-child {
+            margin-top: 0;
+        }
+        .ai-codegen-bubble.assistant pre.ai-md-code {
+            margin: 0;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            line-height: 1.45;
+        }
+        .ai-codegen-bubble.assistant pre.ai-md-code code {
+            font-family: inherit;
+            white-space: pre;
+            display: block;
+        }
+        .ai-codegen-bubble.assistant .ai-md-lang {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .ai-codegen-bubble .bubble-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .ai-codegen-thinking {
+            font-size: 12px;
+            color: var(--accent-2);
+            font-style: italic;
+            padding: 4px 8px;
+            display: none;
+        }
+        .ai-codegen-thinking.visible { display: block; }
+        .ai-codegen-compose {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        .ai-codegen-compose textarea {
+            flex: 1;
+            min-height: 52px;
+            max-height: 120px;
+            resize: vertical;
+            font-size: 13px;
+        }
+        .ai-codegen-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .ai-codegen-toolbar .btn { font-size: 11px; padding: 7px 12px; }
+        #ai-codegen-result {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            padding-top: 4px;
+            border-top: 1px solid var(--border);
+        }
+        #ai-codegen-result.visible { display: flex; }
+        #ai-codegen-summary {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin: 0;
+            line-height: 1.45;
+        }
+        .ai-codegen-files-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+        }
+        .ai-codegen-files-hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin: 0 0 8px;
+            line-height: 1.45;
+        }
+        #ai-codegen-files {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 140px;
+            overflow-y: auto;
+        }
+        .ai-codegen-file-item {
+            padding: 8px 10px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer;
+            text-align: left;
+            color: var(--text-primary);
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .ai-codegen-file-item:hover {
+            border-color: var(--border-light);
+            background: var(--bg-hover);
+        }
+        .ai-codegen-file-item.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent-glow);
+        }
+        #ai-codegen-preview {
+            width: 100%;
+            min-height: 120px;
+            max-height: 200px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            line-height: 1.45;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            padding: 10px;
+            resize: vertical;
+        }
+        .ai-codegen-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .ai-codegen-actions .btn { font-size: 12px; padding: 8px 14px; }
+        .ai-project-footer {
+            padding: 12px 14px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-secondary);
+            flex-shrink: 0;
+        }
+        @media (max-width: 480px) {
+            .ai-project-panel {
+                left: 12px;
+                right: 12px;
+                width: auto;
+                bottom: 86px;
+            }
+            .ai-project-fab { right: 16px; bottom: 16px; }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -233,6 +611,75 @@
             </div>
         </div>
     </div>
+
+    <!-- Generic confirm (replaces window.confirm) -->
+    <div class="modal-overlay confirm-layer" id="confirm-modal" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+            <h2 id="confirm-modal-title">Are you sure?</h2>
+            <p id="confirm-modal-body"></p>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost" id="confirm-modal-cancel">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirm-modal-ok">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    {% if user.is_authenticated %}
+    {% if gemini_enabled or groq_enabled %}
+    <div id="ai-project-endpoints" hidden
+         data-stream-url="{% url 'ai_code_project_chat_stream' %}"
+         data-generate-url="{% url 'ai_code_project_generate' %}"
+         data-zip-url="{% url 'ai_code_project_zip' %}"></div>
+    <div class="ai-project-panel" id="ai-project-panel" aria-hidden="true">
+        <div class="ai-project-panel-header">
+            <div>
+                <h3><span aria-hidden="true">✨</span> AI assistant</h3>
+                <p class="ai-panel-subtitle" id="ai-panel-subtitle">General questions, or turn on code mode for projects &amp; ZIP.</p>
+            </div>
+            <div class="ai-project-header-actions">
+                <button type="button" class="icon-only" id="ai-project-clear" title="Clear">⌫</button>
+                <button type="button" class="icon-only" id="ai-project-close" title="Close">✕</button>
+            </div>
+        </div>
+        <div class="ai-codegen-body">
+            <label class="ai-codegen-mode-row" id="ai-codegen-mode-label" for="ai-codegen-include-code">
+                <input type="checkbox" id="ai-codegen-include-code">
+                <div class="mode-copy">
+                    <p class="mode-title">Include code in replies</p>
+                    <p class="mode-desc">When on: optional code snippets in chat plus one-click <strong>Generate code</strong> (ZIP). No stack questionnaire. When off: plain Q&amp;A only.</p>
+                </div>
+            </label>
+            <p class="ai-codegen-hint" id="ai-codegen-hint">Describe a project or ask for downloadable files — we create real files to preview and a full ZIP automatically when it’s a project or you want a download.</p>
+            <div id="ai-codegen-chat" class="ai-codegen-chat" role="log"></div>
+            <div id="ai-codegen-thinking" class="ai-codegen-thinking">Thinking further…</div>
+            <div class="ai-codegen-compose">
+                <textarea id="ai-codegen-input" maxlength="8000" placeholder="What should the code do?" rows="3"></textarea>
+                <button type="button" class="btn btn-primary" id="ai-codegen-send">Send</button>
+            </div>
+            <div class="ai-codegen-toolbar" id="ai-codegen-toolbar-code">
+                <button type="button" class="btn btn-primary" id="ai-codegen-genfiles" disabled>Generate code</button>
+                <button type="button" class="btn btn-ghost" id="ai-codegen-update" disabled style="display:none;">Update project from chat</button>
+                <button type="button" class="btn btn-ghost" id="ai-codegen-continue" disabled style="display:none;">Continue generation</button>
+            </div>
+            <div id="ai-codegen-result" aria-live="polite">
+                <p id="ai-codegen-summary"></p>
+                <div class="ai-codegen-files-label">Files</div>
+                <p class="ai-codegen-files-hint" id="ai-codegen-files-hint">Click a file to preview. Use <strong>Download ZIP</strong> to save every file at once.</p>
+                <div id="ai-codegen-files"></div>
+                <div class="ai-codegen-field" style="margin-top:4px;">
+                    <label for="ai-codegen-preview">Preview</label>
+                    <textarea id="ai-codegen-preview" readonly rows="6" spellcheck="false"></textarea>
+                </div>
+                <div class="ai-codegen-actions">
+                    <button type="button" class="btn btn-primary" id="ai-codegen-zip">⬇ Download ZIP</button>
+                    <button type="button" class="btn btn-ghost" id="ai-codegen-onefile">⬇ This file</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="ai-project-fab" id="ai-project-fab" title="AI assistant" aria-label="Open AI assistant" aria-expanded="false">✨</button>
+    {% endif %}
+    {% endif %}
 
     <script>
         // Toast notification system
@@ -304,6 +751,625 @@
             window.openLogoutModal = open;
             window.closeLogoutModal = close;
         })();
+
+        (function initConfirmModal() {
+            const overlay = document.getElementById('confirm-modal');
+            const titleEl = document.getElementById('confirm-modal-title');
+            const bodyEl = document.getElementById('confirm-modal-body');
+            const cancelBtn = document.getElementById('confirm-modal-cancel');
+            const okBtn = document.getElementById('confirm-modal-ok');
+            if (!overlay || !titleEl || !bodyEl || !cancelBtn || !okBtn) return;
+
+            let pendingResolve = null;
+
+            function finish(result) {
+                if (!overlay.classList.contains('active')) return;
+                overlay.classList.remove('active');
+                overlay.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+                const r = pendingResolve;
+                pendingResolve = null;
+                if (r) r(result);
+            }
+
+            cancelBtn.addEventListener('click', () => finish(false));
+            okBtn.addEventListener('click', () => finish(true));
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) finish(false);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (!overlay.classList.contains('active')) return;
+                if (e.key === 'Escape') finish(false);
+            });
+
+            window.openConfirmModal = function (options) {
+                const o = options || {};
+                if (pendingResolve) pendingResolve(false);
+                titleEl.textContent = o.title != null ? o.title : 'Are you sure?';
+                bodyEl.textContent = o.message != null ? o.message : '';
+                bodyEl.style.whiteSpace = (o.message && String(o.message).includes('\n')) ? 'pre-line' : 'normal';
+                cancelBtn.textContent = o.cancelText != null ? o.cancelText : 'Cancel';
+                okBtn.textContent = o.confirmText != null ? o.confirmText : 'Confirm';
+                okBtn.className = o.danger ? 'btn btn-danger' : 'btn btn-primary';
+
+                return new Promise((resolve) => {
+                    pendingResolve = resolve;
+                    overlay.classList.add('active');
+                    overlay.setAttribute('aria-hidden', 'false');
+                    document.body.style.overflow = 'hidden';
+                    cancelBtn.focus();
+                });
+            };
+        })();
+
+        (function initAiCodeProject() {
+            const fab = document.getElementById('ai-project-fab');
+            const panel = document.getElementById('ai-project-panel');
+            const closeBtn = document.getElementById('ai-project-close');
+            const clearBtn = document.getElementById('ai-project-clear');
+            const chatEl = document.getElementById('ai-codegen-chat');
+            const thinkingEl = document.getElementById('ai-codegen-thinking');
+            const inputEl = document.getElementById('ai-codegen-input');
+            const sendBtn = document.getElementById('ai-codegen-send');
+            const genfilesBtn = document.getElementById('ai-codegen-genfiles');
+            const updateBtn = document.getElementById('ai-codegen-update');
+            const continueBtn = document.getElementById('ai-codegen-continue');
+            const resultEl = document.getElementById('ai-codegen-result');
+            const summaryEl = document.getElementById('ai-codegen-summary');
+            const filesEl = document.getElementById('ai-codegen-files');
+            const previewEl = document.getElementById('ai-codegen-preview');
+            const zipBtn = document.getElementById('ai-codegen-zip');
+            const oneBtn = document.getElementById('ai-codegen-onefile');
+            const endpoints = document.getElementById('ai-project-endpoints');
+            const includeCodeEl = document.getElementById('ai-codegen-include-code');
+            const toolbarCode = document.getElementById('ai-codegen-toolbar-code');
+            const subtitleEl = document.getElementById('ai-panel-subtitle');
+            const hintEl = document.getElementById('ai-codegen-hint');
+            if (!fab || !panel || !endpoints || !chatEl || !includeCodeEl || !toolbarCode) return;
+
+            const LS_INCLUDE = 'datasend_ai_include_code';
+            try {
+                const s = localStorage.getItem(LS_INCLUDE);
+                if (s === '1') includeCodeEl.checked = true;
+                else if (s === '0') includeCodeEl.checked = false;
+            } catch (e) { /* ignore */ }
+
+            let chatMessages = [];
+            let lastBundle = null;
+            let selectedPath = null;
+            let phase = 'discover';
+            let streamBusy = false;
+            let generateBusy = false;
+            let outputTruncated = false;
+
+            function userWantsDownloadableCode(text) {
+                const t = (text || '').toLowerCase().trim();
+                if (t.length < 8) return false;
+                if (/\bhow\s+(do|can|to|would)\s+(i|you|we)\s+/.test(t) && !/\b(build|create|make)\b/.test(t)) {
+                    return false;
+                }
+                const a = /\b(i\s+)?(want|need|would\s+like)\s+.{0,48}\b(download|zip|files?)\b/.test(t);
+                const b = /\b(download|get)\s+(the\s+)?(zip|files?|code|project)\b/.test(t);
+                const c = /\b(give|send)\s+me\s+(the\s+)?(code|files?|zip|zip\s+file)\b/.test(t);
+                const d = /\bexport\s+(the\s+)?(code|files?|project)\b/.test(t);
+                const e = /\battach\s+.{0,24}\b(files?|zip)\b/.test(t);
+                const f = /\b\.zip\b|\bzip\s+(file|download)\b|\ball\s+files?\s+(in\s+)?(a\s+)?zip\b/.test(t);
+                return a || b || c || d || e || f;
+            }
+
+            function userDescribesProjectBuild(text) {
+                const raw = (text || '').trim();
+                const t = raw.toLowerCase();
+                if (t.length < 12) return false;
+                if (/\?\s*$/.test(raw) && /^(how|what|why|when|where|can\s+you\s+explain)\b/i.test(raw)) {
+                    return false;
+                }
+                const build = /\b(build|create|make|develop|implement|scaffold|want|need|generat(e|ing))\b/.test(
+                    t,
+                );
+                const noun = /\b(app|application|website|web\s*app|api|backend|frontend|full[\s-]*stack|project|game|dashboard|bot|cli|tool|program|site|saas|platform)\b/.test(
+                    t,
+                );
+                return build && noun;
+            }
+
+            function shouldAutoCreateDownloadableFiles(text) {
+                return userWantsDownloadableCode(text) || userDescribesProjectBuild(text);
+            }
+
+            function stripDisplay(t) {
+                return (t || '')
+                    .replace(/\[\[READY_TO_GENERATE\]\]/g, '')
+                    .replace(/\[\[READY_TO_UPDATE\]\]/g, '')
+                    .trim();
+            }
+
+            function escapeHtml(s) {
+                return String(s)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
+
+            function formatAssistantHtml(raw) {
+                const text = stripDisplay(raw);
+                if (!text) return '';
+                const parts = text.split('```');
+                let html = '';
+                for (let i = 0; i < parts.length; i++) {
+                    if (i % 2 === 0) {
+                        const prose = escapeHtml(parts[i]).replace(/\n/g, '<br>');
+                        if (prose) html += '<div class="ai-md-prose">' + prose + '</div>';
+                    } else {
+                        let block = parts[i];
+                        let lang = '';
+                        const nl = block.indexOf('\n');
+                        if (nl > 0 && nl < 40) {
+                            const first = block.slice(0, nl).trim();
+                            if (/^[a-zA-Z0-9+#.\-_]{1,32}$/.test(first)) {
+                                lang = first;
+                                block = block.slice(nl + 1);
+                            }
+                        }
+                        const code = escapeHtml(block);
+                        const langEl = lang
+                            ? '<div class="ai-md-lang">' + escapeHtml(lang) + '</div>'
+                            : '';
+                        html +=
+                            '<div class="ai-md-code-wrap">' +
+                            langEl +
+                            '<pre class="ai-md-code"><code>' +
+                            code +
+                            '</code></pre></div>';
+                    }
+                }
+                return html || escapeHtml(text).replace(/\n/g, '<br>');
+            }
+
+            function includeCodeOn() {
+                return !!includeCodeEl.checked;
+            }
+
+            function syncModeUi() {
+                const on = includeCodeOn();
+                toolbarCode.style.display = on ? 'flex' : 'none';
+                if (subtitleEl) {
+                    subtitleEl.textContent = on
+                        ? 'Code mode: describe what you want, then Generate code (ZIP).'
+                        : 'General chat — turn on the box for code generation.';
+                }
+                if (hintEl) {
+                    hintEl.textContent = on
+                        ? 'Projects or “download / ZIP” requests create files automatically. Otherwise chat, then tap Generate code if you still need a ZIP.'
+                        : 'Ask anything. Replies stream like a normal chat — no ZIP in this mode.';
+                }
+            }
+
+            includeCodeEl.addEventListener('change', () => {
+                try {
+                    localStorage.setItem(LS_INCLUDE, includeCodeOn() ? '1' : '0');
+                } catch (e) { /* ignore */ }
+                syncModeUi();
+                refreshToolbar();
+            });
+
+            function scrollChat() {
+                chatEl.scrollTop = chatEl.scrollHeight;
+            }
+
+            function appendStaticBubble(role, text) {
+                const wrap = document.createElement('div');
+                wrap.className = 'ai-codegen-bubble ' + (role === 'user' ? 'user' : 'assistant');
+                const lab = document.createElement('div');
+                lab.className = 'bubble-label';
+                lab.textContent = role === 'user' ? 'You' : 'Assistant';
+                const body = document.createElement('div');
+                if (role === 'user') {
+                    body.textContent = text;
+                } else {
+                    body.className = 'bubble-body';
+                    body.innerHTML = formatAssistantHtml(text);
+                }
+                wrap.appendChild(lab);
+                wrap.appendChild(body);
+                chatEl.appendChild(wrap);
+                scrollChat();
+                return wrap;
+            }
+
+            function refreshToolbar() {
+                const codeOn = includeCodeOn();
+                const hasUser = chatMessages.some((m) => m.role === 'user');
+                const busy = streamBusy || generateBusy;
+                sendBtn.disabled = busy;
+                genfilesBtn.disabled = !codeOn || !hasUser || generateBusy;
+                if (codeOn && lastBundle) {
+                    updateBtn.style.display = 'inline-flex';
+                    updateBtn.disabled = busy || chatMessages.length < 2;
+                } else {
+                    updateBtn.style.display = 'none';
+                    updateBtn.disabled = true;
+                }
+                continueBtn.style.display = codeOn && outputTruncated ? 'inline-flex' : 'none';
+                continueBtn.disabled = busy;
+            }
+
+            function buildUserText() {
+                return inputEl.value.trim();
+            }
+
+            async function readSseStream(res, onChunk) {
+                const reader = res.body.getReader();
+                const dec = new TextDecoder();
+                let carry = '';
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    carry += dec.decode(value, { stream: true });
+                    let pos;
+                    while ((pos = carry.indexOf('\n\n')) >= 0) {
+                        const block = carry.slice(0, pos);
+                        carry = carry.slice(pos + 2);
+                        for (const line of block.split('\n')) {
+                            const t = line.trim();
+                            if (!t.startsWith('data:')) continue;
+                            const raw = t.slice(5).trim();
+                            try {
+                                const o = JSON.parse(raw);
+                                if (o.e) throw new Error(o.e);
+                                if (o.c) onChunk(o.c);
+                                if (o.t === 'done') return;
+                            } catch (err) {
+                                if (raw && raw[0] === '{') throw err;
+                            }
+                        }
+                    }
+                }
+            }
+
+            async function streamAssistantReply() {
+                const streamUrl = endpoints.getAttribute('data-stream-url');
+                if (!streamUrl) return;
+                if (generateBusy) return;
+                thinkingEl.classList.add('visible');
+                streamBusy = true;
+                refreshToolbar();
+                sendBtn.disabled = true;
+
+                const bubble = document.createElement('div');
+                bubble.className = 'ai-codegen-bubble assistant';
+                const lab = document.createElement('div');
+                lab.className = 'bubble-label';
+                lab.textContent = 'Assistant';
+                const body = document.createElement('div');
+                body.className = 'bubble-body';
+                bubble.appendChild(lab);
+                bubble.appendChild(body);
+                chatEl.appendChild(bubble);
+                scrollChat();
+
+                let full = '';
+                try {
+                    const res = await fetch(streamUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': CSRF,
+                        },
+                        body: JSON.stringify({
+                            messages: chatMessages,
+                            phase: phase,
+                            include_code: includeCodeOn(),
+                        }),
+                    });
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        throw new Error(err.error || res.statusText);
+                    }
+                    await readSseStream(res, (c) => {
+                        full += c;
+                        body.innerHTML = formatAssistantHtml(full);
+                        scrollChat();
+                    });
+                    chatMessages.push({ role: 'assistant', content: full });
+                } catch (err) {
+                    bubble.remove();
+                    if (chatMessages.length && chatMessages[chatMessages.length - 1].role === 'user') {
+                        chatMessages.pop();
+                    }
+                    const ubs = chatEl.querySelectorAll('.ai-codegen-bubble.user');
+                    const lastU = ubs[ubs.length - 1];
+                    if (lastU) lastU.remove();
+                    showToast('Chat', err.message || 'Stream failed', 'error');
+                } finally {
+                    thinkingEl.classList.remove('visible');
+                    streamBusy = false;
+                    sendBtn.disabled = false;
+                    refreshToolbar();
+                }
+            }
+
+            async function runGenerate(opts) {
+                const genUrl = endpoints.getAttribute('data-generate-url');
+                if (!genUrl) return;
+                if (generateBusy) return;
+                if (!includeCodeOn()) {
+                    showToast('Code mode', 'Turn on “Include code in replies” to generate or update the ZIP.', 'warning');
+                    return;
+                }
+                const truncation_retry = !!(opts && opts.truncation_retry);
+                const withFiles = !!(opts && opts.withFiles);
+                generateBusy = true;
+                refreshToolbar();
+                genfilesBtn.disabled = true;
+                updateBtn.disabled = true;
+                continueBtn.disabled = true;
+                thinkingEl.textContent = 'Generating code…';
+                thinkingEl.classList.add('visible');
+                try {
+                    const payload = {
+                        messages: chatMessages,
+                        stack_hint: '',
+                    };
+                    if (withFiles && lastBundle && lastBundle.files) {
+                        payload.files = lastBundle.files;
+                    }
+                    if (truncation_retry) payload.truncation_retry = true;
+                    const res = await fetch(genUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': CSRF,
+                        },
+                        body: JSON.stringify(payload),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (res.status === 409 && data.error === 'OUTPUT_TRUNCATED') {
+                        outputTruncated = true;
+                        showToast('Size limit', data.message || 'Output was cut off.', 'warning');
+                        return;
+                    }
+                    if (!res.ok) {
+                        showToast('Generate', data.error || 'Request failed', 'error');
+                        return;
+                    }
+                    outputTruncated = false;
+                    lastBundle = {
+                        project_name: data.project_name || 'project',
+                        summary: data.summary || '',
+                        files: data.files || [],
+                    };
+                    summaryEl.textContent = lastBundle.summary || 'Generated files:';
+                    resultEl.classList.add('visible');
+                    renderFileList();
+                    phase = 'refine';
+                    appendStaticBubble(
+                        'assistant',
+                        'Code is ready below. Chat if you want tweaks, then use “Update project from chat”.',
+                    );
+                    chatMessages.push({
+                        role: 'assistant',
+                        content:
+                            'Code is ready below. Chat if you want tweaks, then use “Update project from chat”.',
+                    });
+                    showToast(
+                        'Ready',
+                        `${lastBundle.files.length} file(s) — preview below or download the ZIP.`,
+                        'success',
+                    );
+                    try {
+                        resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    } catch (e) { /* ignore */ }
+                } catch (err) {
+                    showToast('Generate', 'Network error', 'error');
+                } finally {
+                    generateBusy = false;
+                    thinkingEl.textContent = 'Thinking further…';
+                    thinkingEl.classList.remove('visible');
+                    refreshToolbar();
+                }
+            }
+
+            function renderFileList() {
+                filesEl.innerHTML = '';
+                selectedPath = null;
+                previewEl.value = '';
+                if (!lastBundle || !lastBundle.files || !lastBundle.files.length) return;
+                lastBundle.files.forEach((f) => {
+                    const p = f.path;
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'ai-codegen-file-item';
+                    btn.textContent = p;
+                    btn.addEventListener('click', () => {
+                        filesEl.querySelectorAll('.ai-codegen-file-item').forEach((x) => x.classList.remove('active'));
+                        btn.classList.add('active');
+                        selectedPath = p;
+                        previewEl.value = f.content || '';
+                    });
+                    filesEl.appendChild(btn);
+                });
+                const first = filesEl.querySelector('.ai-codegen-file-item');
+                if (first) first.click();
+            }
+
+            function hideResult() {
+                resultEl.classList.remove('visible');
+                lastBundle = null;
+                filesEl.innerHTML = '';
+                previewEl.value = '';
+                summaryEl.textContent = '';
+                selectedPath = null;
+            }
+
+            function resetAll() {
+                chatEl.innerHTML = '';
+                chatMessages = [];
+                phase = 'discover';
+                outputTruncated = false;
+                inputEl.value = '';
+                hideResult();
+                syncModeUi();
+                refreshToolbar();
+            }
+
+            function openPanel() {
+                panel.classList.add('open');
+                panel.setAttribute('aria-hidden', 'false');
+                fab.setAttribute('aria-expanded', 'true');
+                syncModeUi();
+                inputEl.focus();
+            }
+
+            function closePanel() {
+                panel.classList.remove('open');
+                panel.setAttribute('aria-hidden', 'true');
+                fab.setAttribute('aria-expanded', 'false');
+            }
+
+            fab.addEventListener('click', () => {
+                if (panel.classList.contains('open')) closePanel();
+                else openPanel();
+            });
+            closeBtn.addEventListener('click', closePanel);
+
+            clearBtn.addEventListener('click', async () => {
+                const ok = await openConfirmModal({
+                    title: 'Reset chat?',
+                    message: 'Clears conversation and any generated files in this panel.',
+                    confirmText: 'Reset',
+                    danger: true,
+                });
+                if (!ok) return;
+                resetAll();
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Escape') return;
+                if (!panel.classList.contains('open')) return;
+                const c = document.getElementById('confirm-modal');
+                const l = document.getElementById('logout-modal');
+                if (c && c.classList.contains('active')) return;
+                if (l && l.classList.contains('active')) return;
+                closePanel();
+            });
+
+            sendBtn.addEventListener('click', async () => {
+                const t = buildUserText();
+                if (!t) {
+                    showToast('Message', 'Write something to send.', 'warning');
+                    return;
+                }
+                if (streamBusy || generateBusy) return;
+                inputEl.value = '';
+                chatMessages.push({ role: 'user', content: t });
+                appendStaticBubble('user', t);
+
+                if (includeCodeOn() && shouldAutoCreateDownloadableFiles(t)) {
+                    showToast('Download', 'Creating files to preview and ZIP…', 'info');
+                    await runGenerate({ withFiles: false });
+                    return;
+                }
+
+                await streamAssistantReply();
+            });
+
+            inputEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendBtn.click();
+                }
+            });
+
+            genfilesBtn.addEventListener('click', () => runGenerate({ withFiles: false }));
+
+            updateBtn.addEventListener('click', () => {
+                if (!lastBundle) return;
+                runGenerate({ withFiles: true });
+            });
+
+            continueBtn.addEventListener('click', () => {
+                runGenerate({ withFiles: !!lastBundle, truncation_retry: true });
+            });
+
+            zipBtn.addEventListener('click', async () => {
+                if (!lastBundle || !lastBundle.files.length) {
+                    showToast('ZIP', 'Generate a project first.', 'warning');
+                    return;
+                }
+                const zipUrl = endpoints.getAttribute('data-zip-url');
+                if (!zipUrl) return;
+                zipBtn.disabled = true;
+                try {
+                    const res = await fetch(zipUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': CSRF,
+                        },
+                        body: JSON.stringify({
+                            project_name: lastBundle.project_name,
+                            files: lastBundle.files,
+                        }),
+                    });
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        showToast('ZIP', err.error || 'Could not build ZIP', 'error');
+                        return;
+                    }
+                    const blob = await res.blob();
+                    const dispo = res.headers.get('Content-Disposition') || '';
+                    let fname = `${lastBundle.project_name || 'project'}.zip`;
+                    const m = dispo.match(/filename="([^"]+)"/);
+                    if (m) fname = m[1];
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fname;
+                    a.rel = 'noopener';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                    showToast('Download', fname, 'success');
+                } catch (err) {
+                    showToast('ZIP', 'Network error', 'error');
+                } finally {
+                    zipBtn.disabled = false;
+                }
+            });
+
+            oneBtn.addEventListener('click', () => {
+                if (!lastBundle || !lastBundle.files.length) {
+                    showToast('File', 'Generate a project first.', 'warning');
+                    return;
+                }
+                const path = selectedPath;
+                const f = lastBundle.files.find((x) => x.path === path);
+                if (!f) {
+                    showToast('File', 'Select a file in the list.', 'warning');
+                    return;
+                }
+                const blob = new Blob([f.content || ''], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const base = (path || 'file.txt').split('/').pop() || 'file.txt';
+                a.download = base;
+                a.rel = 'noopener';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                showToast('Download', base, 'success');
+            });
+
+            syncModeUi();
+            refreshToolbar();
+        })();
+
     </script>
     {% block extra_js %}{% endblock %}
 </body>

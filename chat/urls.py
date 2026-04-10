@@ -1,7 +1,15 @@
 from django.urls import path, reverse
 from django.shortcuts import redirect
 
-from chat.ai_views import ai_assistant, ai_transcript, ai_apply_transcript, ai_summarize_room
+from chat.ai_views import (
+    ai_assistant,
+    ai_apply_transcript,
+    ai_code_project_chat_stream,
+    ai_code_project_generate,
+    ai_code_project_zip,
+    ai_summarize_room,
+    ai_transcript,
+)
 from chat.views import home, login_view, register_view, logout_view, room_view, create_room, upload_file, search_users, \
     notifications_list, mark_notification_read, get_messages, get_quota, subscription_page, create_checkout_session, \
     subscription_success, cancel_subscription, manual_activate, profile_view, ws_check
@@ -35,8 +43,11 @@ urlpatterns = [
     path('api/room/<uuid:room_id>/messages/', get_messages, name='get_messages'),
     path('api/quota/', get_quota, name='get_quota'),
 
-    # Gemini AI (requires GEMINI_API_KEY)
+    # AI (GEMINI_API_KEY and/or GROQ_API_KEY via ai_service)
     path('api/ai/assistant/', ai_assistant, name='ai_assistant'),
+    path('api/ai/project/chat/stream/', ai_code_project_chat_stream, name='ai_code_project_chat_stream'),
+    path('api/ai/project/generate/', ai_code_project_generate, name='ai_code_project_generate'),
+    path('api/ai/project/zip/', ai_code_project_zip, name='ai_code_project_zip'),
     path('api/room/<uuid:room_id>/ai/transcript/', ai_transcript, name='ai_transcript'),
     path('api/room/<uuid:room_id>/ai/apply-transcript/', ai_apply_transcript, name='ai_apply_transcript'),
     path('api/room/<uuid:room_id>/ai/summarize/', ai_summarize_room, name='ai_summarize_room'),

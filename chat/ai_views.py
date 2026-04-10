@@ -4,22 +4,27 @@ JSON API views for Gemini-powered assistant and AI-generated chat transcripts.
 
 from __future__ import annotations
 
+import io
 import json
 import logging
+import re
+import zipfile
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from .gemini_client import (
+from .ai_service import (
     assistant_reply,
+    generate_code_project,
     generate_transcript_json,
     is_configured,
+    stream_codegen_coach,
     summarize_recent_messages,
 )
 from .models import DailyMessageCount, Message, Notification, Room, Subscription
@@ -34,6 +39,132 @@ def _parse_json(request):
         return json.loads(request.body.decode("utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError):
         return None
+
+
+_CODE_PATH_OK = re.compile(r"^[a-zA-Z0-9._][a-zA-Z0-9._\-/]*$")
+
+
+def sanitize_code_files_for_download(files_raw: list) -> tuple[list[dict[str, str]], str | None]:
+    if not isinstance(files_raw, list):
+        return [], "Invalid files list."
+    out: list[dict[str, str]] = []
+    total = 0
+    for item in files_raw[:16]:
+        if not isinstance(item, dict):
+            continue
+        path = str(item.get("path", "")).strip().replace("\\", "/").lstrip("/")
+        if not path or ".." in path or not _CODE_PATH_OK.match(path) or len(path) > 120:
+            continue
+        content = str(item.get("content", ""))
+        if len(content) > 100_000:
+            content = content[:100_000]
+        total += len(content)
+        if total > 450_000:
+            break
+        out.append({"path": path, "content": content})
+    if len(out) < 1:
+        return [], "No valid files to package."
+    return out, None
+
+
+def zip_attachment_filename(project_name: str) -> str:
+    base = re.sub(r"[^a-zA-Z0-9._-]+", "-", (project_name or "").strip().lower()).strip("-")
+    return f"{(base or 'project')[:48]}.zip"
+
+
+def _compose_code_project_prompt(data: dict) -> tuple[str | None, str | None]:
+    """
+    Merge questionnaire + feature description into one prompt for the model.
+    Returns (prompt, error_message).
+    """
+    desc = (data.get("prompt") or data.get("message") or "").strip()
+    if not desc:
+        return None, "Describe what the project should do (features and details)."
+
+    ptype = (data.get("project_type") or "").strip()
+    psize = (data.get("project_size") or "").strip()
+    users = (data.get("expected_users") or "").strip()
+    prod = (data.get("production") or "").strip()
+    nd_val = data.get("needs_database")
+    nd_raw = str(nd_val).strip().lower() if nd_val is not None else ""
+    if nd_raw in ("true", "1", "y"):
+        nd_raw = "yes"
+    elif nd_raw in ("false", "0", "n"):
+        nd_raw = "no"
+
+    if not ptype or not psize or not users or not prod or nd_raw not in ("yes", "no"):
+        return None, "Please answer all project questions (type, size, users, production, database)."
+
+    db_line = ""
+    if nd_raw == "yes":
+        db = (data.get("database") or data.get("database_choice") or "").strip()
+        if not db:
+            return None, "Choose which database to use (or “Not sure”)."
+        other = (data.get("database_other") or "").strip()[:200]
+        if db == "Other" and not other:
+            return None, "Specify the database name or service under “Database details”."
+        db_line = f"- Database: required. Preferred stack: {db}."
+        if other:
+            db_line += f" Extra detail: {other}."
+    else:
+        db_line = (
+            "- Database: not required. Prefer in-memory stores, flat files, or mocks unless "
+            "the feature description clearly needs persistence; if a tiny local DB helps, SQLite is OK."
+        )
+
+    composed = f"""PROJECT CONSTRAINTS (follow these when choosing structure, dependencies, and files):
+
+- Type: {ptype}
+- Scope / how big: {psize}
+- Expected users or traffic: {users}
+- Production / “live” intent: {prod}
+{db_line}
+
+FEATURE DESCRIPTION (implement this):
+---
+{desc}
+---
+"""
+    return composed, None
+
+
+def _compose_prompt_from_messages(messages: list) -> str:
+    lines: list[str] = []
+    for m in messages:
+        if not isinstance(m, dict):
+            continue
+        role = m.get("role")
+        c = (m.get("content") or "").strip()
+        if not c:
+            continue
+        c = (
+            c.replace("[[READY_TO_GENERATE]]", "")
+            .replace("[[READY_TO_UPDATE]]", "")
+            .strip()
+        )
+        if not c:
+            continue
+        who = "User" if role == "user" else "Assistant"
+        lines.append(f"{who}: {c}")
+    return "\n\n".join(lines)
+
+
+def _compose_update_prompt(messages: list, files: list) -> str:
+    conv = _compose_prompt_from_messages(messages)
+    parts: list[str] = []
+    for f in files[:14]:
+        if not isinstance(f, dict):
+            continue
+        p = str(f.get("path", "")).strip()
+        body = str(f.get("content", ""))[:3200]
+        if p:
+            parts.append(f"--- FILE: {p} ---\n{body}")
+    blob = "\n\n".join(parts)
+    return f"""{conv}
+
+CURRENT PROJECT FILES (return a full updated JSON project; edit, add, or remove files as needed):
+{blob}
+"""
 
 
 def _media_url(request, field_file):
@@ -261,3 +392,148 @@ def ai_summarize_room(request, room_id):
     if err:
         return JsonResponse({"error": err}, status=400)
     return JsonResponse({"summary": summary})
+
+
+@login_required
+@require_POST
+def ai_code_project_chat_stream(request):
+    if not is_configured():
+        return JsonResponse(
+            {"error": "AI is not configured. Set GROQ_API_KEY or GEMINI_API_KEY."},
+            status=503,
+        )
+    data = _parse_json(request)
+    if data is None:
+        return JsonResponse({"error": "Invalid JSON."}, status=400)
+    messages = data.get("messages")
+    phase = (data.get("phase") or "discover").strip() or "discover"
+    include_code = data.get("include_code")
+    if include_code is None:
+        include_code = True
+    else:
+        include_code = bool(include_code)
+    if not isinstance(messages, list) or len(messages) < 1:
+        return JsonResponse({"error": "messages (non-empty list) required."}, status=400)
+    last = messages[-1]
+    if not isinstance(last, dict) or last.get("role") != "user":
+        return JsonResponse({"error": "Last message must be from the user."}, status=400)
+
+    def event_stream():
+        try:
+            for piece in stream_codegen_coach(messages, phase, include_code):
+                if not piece:
+                    continue
+                yield f"data: {json.dumps({'c': piece}, ensure_ascii=False)}\n\n".encode("utf-8")
+            yield b'data: {"t":"done"}\n\n'
+        except Exception as e:
+            logger.exception("ai_code_project_chat_stream")
+            yield f"data: {json.dumps({'e': str(e)[:400]})}\n\n".encode("utf-8")
+
+    resp = StreamingHttpResponse(event_stream(), content_type="text/event-stream; charset=utf-8")
+    resp["Cache-Control"] = "no-cache"
+    resp["X-Accel-Buffering"] = "no"
+    return resp
+
+
+@login_required
+@require_POST
+def ai_code_project_generate(request):
+    if not is_configured():
+        return JsonResponse(
+            {"error": "AI is not configured. Set GROQ_API_KEY or GEMINI_API_KEY."},
+            status=503,
+        )
+    data = _parse_json(request)
+    if data is None:
+        return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+    stack = (data.get("stack_hint") or data.get("stack") or data.get("tech") or "").strip()
+    continuation_custom = (data.get("continuation_note") or "").strip()[:4000]
+    truncation_retry = bool(data.get("truncation_retry"))
+
+    messages = data.get("messages")
+    files = data.get("files")
+
+    if isinstance(messages, list) and len(messages) > 0:
+        if isinstance(files, list) and len(files) > 0:
+            prompt = _compose_update_prompt(messages, files)
+        else:
+            prompt = _compose_prompt_from_messages(messages)
+        if not prompt.strip():
+            return JsonResponse({"error": "Conversation is empty."}, status=400)
+        cont_parts: list[str] = []
+        if continuation_custom:
+            cont_parts.append(continuation_custom)
+        if truncation_retry:
+            cont_parts.append(
+                "The previous JSON output was truncated or invalid. Output ONE complete valid JSON object only "
+                "with keys project_name, summary, files. Use at most 8 files with concise complete content."
+            )
+        cont_note = "\n".join(cont_parts) if cont_parts else None
+        raw, err = generate_code_project(prompt, stack, cont_note)
+    else:
+        prompt, perr = _compose_code_project_prompt(data)
+        if perr:
+            return JsonResponse({"error": perr}, status=400)
+        cont_note = continuation_custom if continuation_custom else None
+        if truncation_retry:
+            extra = (
+                "The previous JSON output was truncated. Output ONE complete valid JSON object only; "
+                "use fewer smaller files."
+            )
+            cont_note = f"{cont_note}\n{extra}" if cont_note else extra
+        raw, err = generate_code_project(prompt, stack, cont_note)
+
+    if err == "OUTPUT_TRUNCATED":
+        return JsonResponse(
+            {
+                "error": "OUTPUT_TRUNCATED",
+                "message": "The model hit a size limit. Tap “Continue generation” to retry with tighter output.",
+            },
+            status=409,
+        )
+    if err:
+        return JsonResponse({"error": err}, status=400)
+
+    files_in = raw.get("files") if isinstance(raw, dict) else None
+    if not isinstance(files_in, list):
+        return JsonResponse({"error": "Invalid AI output."}, status=400)
+    files_out, serr = sanitize_code_files_for_download(files_in)
+    if serr:
+        return JsonResponse({"error": serr}, status=400)
+
+    project_name = str(raw.get("project_name") or "generated-project").strip()[:200]
+    summary = str(raw.get("summary") or "").strip()[:500]
+    return JsonResponse(
+        {
+            "success": True,
+            "project_name": project_name,
+            "summary": summary,
+            "files": files_out,
+        }
+    )
+
+
+@login_required
+@require_POST
+def ai_code_project_zip(request):
+    data = _parse_json(request)
+    if data is None:
+        return JsonResponse({"error": "Invalid JSON."}, status=400)
+    files_raw = data.get("files")
+    project_name = (data.get("project_name") or "project").strip()
+    if not isinstance(files_raw, list):
+        return JsonResponse({"error": "files must be a list."}, status=400)
+    cleaned, serr = sanitize_code_files_for_download(files_raw)
+    if serr:
+        return JsonResponse({"error": serr}, status=400)
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for f in cleaned:
+            zf.writestr(f["path"], f["content"].encode("utf-8"))
+    buf.seek(0)
+    out = buf.getvalue()
+    resp = HttpResponse(out, content_type="application/zip")
+    resp["Content-Disposition"] = f'attachment; filename="{zip_attachment_filename(project_name)}"'
+    return resp

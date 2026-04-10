@@ -287,7 +287,13 @@ async function alreadyPaid() {
 }
 
 async function cancelSubscription() {
-    if (!confirm('Are you sure you want to cancel your Pro subscription?\nYou will keep Pro access until the end of the current billing period.')) return;
+    const ok = await openConfirmModal({
+        title: 'Cancel Pro subscription?',
+        message: 'Are you sure you want to cancel your Pro subscription?\nYou will keep Pro access until the end of the current billing period.',
+        confirmText: 'Cancel subscription',
+        danger: true,
+    });
+    if (!ok) return;
 
     try {
         const res  = await fetch('{% url "cancel_subscription" %}', {
