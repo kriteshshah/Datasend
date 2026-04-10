@@ -37,6 +37,13 @@ ALLOWED_HOSTS = ['*']
 # Set in Render env: CSRF_TRUSTED_ORIGINS=https://datasend-xpoz.onrender.com
 _csrf = os.getenv('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf.split(',') if o.strip()]
+if not CSRF_TRUSTED_ORIGINS:
+    # Safe local defaults for POST forms in development.
+    CSRF_TRUSTED_ORIGINS = [
+        'http://127.0.0.1:8000',
+        'http://localhost:8000',
+        'https://datasend-xpoz.onrender.com'
+    ]
 
 # ── Apps ──────────────────────────────────────────────────────────────────────
 INSTALLED_APPS = [

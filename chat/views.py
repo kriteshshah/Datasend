@@ -4,6 +4,7 @@ Views for the chat application
 
 import json
 import os
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
@@ -13,6 +14,7 @@ from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.db.models import Q
+from django.db import transaction, IntegrityError
 from django.conf import settings
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -26,6 +28,8 @@ from .models import (
     Room, RoomMembership, Message, Notification, UserProfile,
     Subscription, DailyMessageCount, DailyAiUsage, Reaction,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ─── Auth Views ───────────────────────────────────────────────────────────────
@@ -52,26 +56,41 @@ def register_view(request):
     error = None
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
-        email    = request.POST.get('email', '').strip()
+        email    = request.POST.get('email', '').strip().lower()
         password = request.POST.get('password', '')
         password2 = request.POST.get('password2', '')
         full_name = request.POST.get('full_name', '').strip()
-        if password != password2:
+        if not username:
+            error = 'Username is required'
+        elif not password:
+            error = 'Password is required'
+        elif password != password2:
             error = 'Passwords do not match'
         elif User.objects.filter(username=username).exists():
             error = 'Username already taken'
-        elif User.objects.filter(email=email).exists():
+        elif email and User.objects.filter(email__iexact=email).exists():
             error = 'Email already registered'
         else:
-            user = User.objects.create_user(username=username, email=email, password=password)
-            if full_name:
-                parts = full_name.split(' ', 1)
-                user.first_name = parts[0]
-                user.last_name  = parts[1] if len(parts) > 1 else ''
-                user.save()
-            _ensure_profile(user)
-            login(request, user)
-            return redirect('home')
+            try:
+                with transaction.atomic():
+                    user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=password,
+                    )
+                    if full_name:
+                        parts = full_name.split(' ', 1)
+                        user.first_name = parts[0]
+                        user.last_name = parts[1] if len(parts) > 1 else ''
+                        user.save()
+                    _ensure_profile(user)
+                    login(request, user, backend=settings.AUTHENTICATION_BACKENDS[0])
+                return redirect('home')
+            except IntegrityError:
+                error = 'Username or email is already in use. Please try a different one.'
+            except Exception:
+                logger.exception("Registration failed for username=%s", username)
+                error = 'Could not create account right now. Please try again.'
     return render(request, 'chat/register.html', {'error': error})
 
 
