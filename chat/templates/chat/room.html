@@ -687,7 +687,7 @@
         </div>
         <div class="ai-panel-body">
             <div class="ai-pane active" id="ai-pane-ask">
-                <p class="ai-hint">Ask anything — answers use Google Gemini on the server. Chat stays in this panel and is not saved to the room.</p>
+                <p class="ai-hint">{% if is_pro %}Unlimited AI chat — answers on the server; not saved to the room.{% else %}AI chat: {{ free_ai_limit }} requests/day on Free — <a href="{% url 'subscription' %}">Pro</a> is unlimited.{% endif %}</p>
                 <div class="ai-msgs" id="ai-assistant-msgs"></div>
                 <div class="ai-input-row">
                     <textarea id="ai-assistant-input" placeholder="Ask a question…" rows="2" onkeydown="aiAssistantKeydown(event)"></textarea>
@@ -695,7 +695,7 @@
                 </div>
             </div>
             <div class="ai-pane" id="ai-pane-script">
-                <p class="ai-hint">Describe a scene or topic; AI drafts a back-and-forth you can post into this room (uses your daily message quota per line).</p>
+                <p class="ai-hint">AI messaging: generates a script you can post (1 AI request per generation; posting uses your message quota per line).{% if not is_pro %} Free plan: {{ free_ai_limit }} AI uses/day.{% endif %}</p>
                 <textarea id="ai-script-prompt" rows="4" placeholder="e.g. Two friends planning a weekend trip, friendly tone…" style="width:100%;font-size:13px;"></textarea>
                 <label class="ai-hint" style="display:flex;align-items:center;gap:8px;">
                     <input type="checkbox" id="ai-script-context" checked> Use recent messages in this room as context
@@ -710,7 +710,7 @@
                 <div class="ai-gen-preview" id="ai-script-preview">Preview appears here.</div>
             </div>
             <div class="ai-pane" id="ai-pane-summary">
-                <p class="ai-hint">Summarize the latest text messages in this room (Gemini).</p>
+                <p class="ai-hint">Summarize recent messages (1 AI request).{% if not is_pro %} Counts toward your {{ free_ai_limit }}/day AI limit unless you’re on Pro.{% endif %}</p>
                 <button type="button" class="btn btn-primary" onclick="summarizeRoomAi()" style="width:100%;justify-content:center;">Summarize chat</button>
                 <div class="ai-gen-preview" id="ai-summary-out" style="min-height:200px;">Summary appears here.</div>
             </div>
@@ -731,13 +731,27 @@
     <div class="quota-modal">
         <div style="font-size:48px;margin-bottom:16px;">⚡</div>
         <h2>Free Limit Reached</h2>
-        <p>You've used all 30 free messages today. Upgrade to Pro for unlimited messaging, file sharing, and more!</p>
+        <p>You've used all {{ free_limit }} free messages today. Upgrade to Pro for unlimited messaging, file sharing, AI, and more!</p>
         <div class="price-card">
-            <div class="price">₹299<span class="per">/month</span></div>
-            <div style="margin-top:8px;opacity:0.9;">Unlimited messages · All media · Priority support</div>
+            <div class="price">{{ subscription_price }}<span class="per">/month</span></div>
+            <div style="margin-top:8px;opacity:0.9;">Unlimited messages · Unlimited AI · All media · Priority support</div>
         </div>
         <a href="{% url 'subscription' %}" class="btn btn-primary" style="width:100%;justify-content:center;padding:13px;">Upgrade to Pro ⚡</a>
         <button onclick="document.getElementById('quota-modal').classList.remove('active')" class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:10px;">Maybe later</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="ai-quota-modal">
+    <div class="quota-modal">
+        <div style="font-size:48px;margin-bottom:16px;">✨</div>
+        <h2>AI limit reached</h2>
+        <p id="ai-quota-modal-text">Free accounts get {{ free_ai_limit }} AI requests per day. Upgrade to Pro for unlimited AI chat and messaging.</p>
+        <div class="price-card">
+            <div class="price">{{ subscription_price }}<span class="per">/month</span></div>
+            <div style="margin-top:8px;opacity:0.9;">Unlimited AI assistant · Scripts &amp; summaries · Code coach</div>
+        </div>
+        <a href="{% url 'subscription' %}" class="btn btn-primary" style="width:100%;justify-content:center;padding:13px;">Upgrade to Pro ⚡</a>
+        <button type="button" onclick="document.getElementById('ai-quota-modal').classList.remove('active')" class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:10px;">Maybe later</button>
     </div>
 </div>
 {% endblock %}
@@ -1700,6 +1714,12 @@ async function aiJsonPost(url, body) {
         if (data.error === 'quota_exceeded') {
             const m = document.getElementById('quota-modal');
             if (m) m.classList.add('active');
+        }
+        if (data.error === 'ai_quota_exceeded') {
+            const am = document.getElementById('ai-quota-modal');
+            const tx = document.getElementById('ai-quota-modal-text');
+            if (tx && data.message) tx.textContent = data.message;
+            if (am) am.classList.add('active');
         }
         throw new Error(data.error || data.message || r.statusText || 'Request failed');
     }

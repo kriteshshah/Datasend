@@ -93,12 +93,24 @@
 
 <div class="success-page">
     <div class="success-card">
+        {% if activation_error %}
+        <div class="success-icon">⚠️</div>
+        <h1 style="-webkit-text-fill-color: var(--yellow);">Activation pending</h1>
+        <p style="color:var(--red);font-size:14px;">
+            {{ activation_error }}
+        </p>
+        <p>
+            If you completed checkout, open <a href="{% url 'subscription' %}">Subscribe</a>
+            and tap <strong>“Already paid but Pro isn’t showing?”</strong> — or wait a minute for the webhook.
+        </p>
+        {% else %}
         <div class="success-icon">🎉</div>
         <h1>You're Pro!</h1>
         <p>
             Your subscription is active. Enjoy unlimited messaging,
             media sharing, and all premium features!
         </p>
+        {% endif %}
 
         <div class="features-list">
             <div class="feature-row"><span class="icon">💬</span> Unlimited messages every day</div>
@@ -109,7 +121,7 @@
         </div>
 
         <a href="{% url 'home' %}" class="btn btn-primary" style="width:100%; justify-content:center; padding:14px; font-size:15px;">
-            Start Chatting ➤
+            {% if activation_error %}Back to app{% else %}Start Chatting ➤{% endif %}
         </a>
     </div>
 </div>

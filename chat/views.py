@@ -21,9 +21,10 @@ import uuid
 from django.urls import reverse
 
 from .gif_providers import gif_picker_configured, search_gifs
+from .subscription_service import activate_pro_from_stripe
 from .models import (
     Room, RoomMembership, Message, Notification, UserProfile,
-    Subscription, DailyMessageCount, Reaction
+    Subscription, DailyMessageCount, DailyAiUsage, Reaction,
 )
 
 
@@ -146,6 +147,8 @@ def room_view(request, room_id):
         "stripe_public_key": settings.STRIPE_PUBLIC_KEY,
         "gif_picker_enabled": gif_picker_configured(),
         "gif_search_url": reverse("gif_search"),
+        "subscription_price": getattr(settings, "SUBSCRIPTION_DISPLAY_PRICE", "₹309"),
+        "free_ai_limit": getattr(settings, "FREE_AI_USES_PER_DAY", 10),
     }
     return render(request, "chat/room.html", context)
 
@@ -429,14 +432,20 @@ def subscription_page(request):
     sub, _   = Subscription.objects.get_or_create(user=request.user)
     today    = timezone.now().date()
     daily, _ = DailyMessageCount.objects.get_or_create(user=request.user, date=today)
+    ai_daily, _ = DailyAiUsage.objects.get_or_create(user=request.user, date=today)
     FREE_LIMIT = getattr(settings, 'FREE_MESSAGES_PER_DAY', 30)
+    AI_LIMIT = getattr(settings, 'FREE_AI_USES_PER_DAY', 10)
     context = {
         'subscription': sub,
         'remaining': max(0, FREE_LIMIT - daily.count),
         'free_limit': FREE_LIMIT,
+        'free_ai_limit': AI_LIMIT,
+        'ai_used_today': 0 if sub.is_pro else ai_daily.count,
+        'ai_remaining': 9999 if sub.is_pro else max(0, AI_LIMIT - ai_daily.count),
         'is_pro': sub.is_pro,
         'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
-        'subscription_price': getattr(settings, 'SUBSCRIPTION_DISPLAY_PRICE', '₹2'),
+        'subscription_price': getattr(settings, 'SUBSCRIPTION_DISPLAY_PRICE', '₹309'),
+        'subscription_trial_days': int(getattr(settings, 'SUBSCRIPTION_TRIAL_DAYS', 0)),
     }
     return render(request, 'chat/subscription.html', context)
 
@@ -449,10 +458,8 @@ def create_checkout_session(request):
 
     Flow:
       1. User clicks Upgrade on /subscribe/
-      2. This view creates a Stripe Checkout session with:
-         - A ₹2 initial setup charge (one-time line item)
-         - A recurring subscription at SUBSCRIPTION_PRICE_ID
-      3. User is redirected to Stripe-hosted checkout page
+      2. This view creates a Stripe Checkout session for the recurring Price (SUBSCRIPTION_PRICE_ID).
+      3. User is redirected to Stripe-hosted checkout (amount must match SUBSCRIPTION_DISPLAY_PRICE in UI).
       4. On success → /subscribe/success/ → plan activated via webhook
     """
     import stripe
@@ -521,14 +528,30 @@ def subscription_success(request):
             import stripe
             stripe.api_key = settings.STRIPE_SECRET_KEY
 
-            # Retrieve full session from Stripe
-            session = stripe.checkout.Session.retrieve(session_id)
+            session = stripe.checkout.Session.retrieve(
+                session_id,
+                expand=['subscription'],
+            )
 
-            # Activate Pro immediately — works with or without webhooks
-            if session.payment_status in ('paid', 'no_payment_required'):
-                _activate_pro_from_session(request.user, session)
-            elif session.status == 'complete':
-                _activate_pro_from_session(request.user, session)
+            ref = getattr(session, 'client_reference_id', None) or ''
+            if ref and str(request.user.id) != str(ref):
+                activation_error = (
+                    'This payment was started from a different account. '
+                    'Log in with the same user you used at checkout, or use “Already paid” on the subscribe page.'
+                )
+            elif session.status != 'complete':
+                activation_error = f'Checkout is not complete yet (status: {session.status}).'
+            elif getattr(session, 'mode', None) != 'subscription':
+                activation_error = 'This session is not a subscription checkout.'
+            elif not getattr(session, 'subscription', None):
+                activation_error = 'No subscription was created on this checkout. Contact support if you were charged.'
+            else:
+                # Trial checkouts: payment_status is often "unpaid" until the first charge — still valid Pro start
+                activate_pro_from_stripe(
+                    request.user,
+                    _stripe_id(session.customer),
+                    _stripe_id(session.subscription),
+                )
 
         except Exception as e:
             activation_error = str(e)
@@ -539,42 +562,22 @@ def subscription_success(request):
     })
 
 
+def _stripe_id(obj):
+    """Stripe expand returns str id or object/dict with id."""
+    if obj is None:
+        return ''
+    if isinstance(obj, str):
+        return obj
+    if isinstance(obj, dict):
+        return str(obj.get('id', '') or '')
+    return str(getattr(obj, 'id', '') or '')
+
+
 def _activate_pro_from_session(user, session):
-    """
-    Activate Pro plan directly from a Stripe Checkout Session object.
-    Called from subscription_success (fallback) and stripe_webhook.
-    Handles both Stripe SDK objects (dot notation) and dicts.
-    """
-    import datetime
-
-    def _get(obj, key, default=None):
-        """Get attr from Stripe object or dict."""
-        if hasattr(obj, key):
-            return getattr(obj, key, default)
-        if isinstance(obj, dict):
-            return obj.get(key, default)
-        return default
-
-    customer_id      = _get(session, 'customer', '')
-    subscription_id  = _get(session, 'subscription', '')
-
-    sub, _ = Subscription.objects.get_or_create(user=user)
-    sub.plan                    = Subscription.PLAN_PRO
-    sub.status                  = Subscription.STATUS_ACTIVE
-    sub.stripe_customer_id      = customer_id or ''
-    sub.stripe_subscription_id  = subscription_id or ''
-    sub.started_at              = timezone.now()
-    sub.expires_at              = timezone.now() + datetime.timedelta(days=30)
-    sub.save()
-
-    Notification.objects.get_or_create(
-        recipient=user,
-        notification_type=Notification.TYPE_SUBSCRIPTION,
-        title='🎉 Welcome to Pro!',
-        defaults={
-            'body': 'You now have unlimited messaging and all premium features unlocked.',
-        }
-    )
+    """Activate Pro from a Checkout Session (manual recovery / legacy callers)."""
+    customer_id = _stripe_id(getattr(session, 'customer', None))
+    subscription_id = _stripe_id(getattr(session, 'subscription', None))
+    activate_pro_from_stripe(user, customer_id, subscription_id)
 
 
 @login_required
@@ -665,12 +668,32 @@ def get_quota(request):
     _ensure_profile(request.user)
     sub, _ = Subscription.objects.get_or_create(user=request.user)
     FREE_LIMIT = getattr(settings, 'FREE_MESSAGES_PER_DAY', 30)
+    AI_LIMIT = getattr(settings, 'FREE_AI_USES_PER_DAY', 10)
+    today = timezone.now().date()
+    ai_daily, _ = DailyAiUsage.objects.get_or_create(user=request.user, date=today)
     if sub.is_pro:
-        return JsonResponse({'is_pro': True, 'remaining': 9999, 'limit': FREE_LIMIT})
-    today    = timezone.now().date()
+        return JsonResponse({
+            'is_pro': True,
+            'remaining': 9999,
+            'limit': FREE_LIMIT,
+            'ai_unlimited': True,
+            'ai_limit': AI_LIMIT,
+            'ai_used': ai_daily.count,
+            'ai_remaining': 9999,
+        })
     daily, _ = DailyMessageCount.objects.get_or_create(user=request.user, date=today)
     remaining = max(0, FREE_LIMIT - daily.count)
-    return JsonResponse({'is_pro': False, 'remaining': remaining, 'limit': FREE_LIMIT, 'used': daily.count})
+    ai_rem = max(0, AI_LIMIT - ai_daily.count)
+    return JsonResponse({
+        'is_pro': False,
+        'remaining': remaining,
+        'limit': FREE_LIMIT,
+        'used': daily.count,
+        'ai_unlimited': False,
+        'ai_limit': AI_LIMIT,
+        'ai_used': ai_daily.count,
+        'ai_remaining': ai_rem,
+    })
 
 
 # ─── Manual Pro Activation (for missed webhooks) ─────────────────────────────
@@ -696,35 +719,39 @@ def manual_activate(request):
         return JsonResponse({'error': 'Stripe not configured.'}, status=400)
 
     try:
-        # Find the most recent completed checkout session for this user
-        sessions = stripe.checkout.Session.list(limit=5)
+        sessions = stripe.checkout.Session.list(limit=20)
         paid_session = None
         for s in sessions.data:
-            if (str(s.client_reference_id) == str(request.user.id)
-                    and s.payment_status in ('paid', 'no_payment_required')
-                    and s.status == 'complete'):
-                paid_session = s
-                break
+            if str(s.client_reference_id) != str(request.user.id):
+                continue
+            if s.status != 'complete' or s.mode != 'subscription':
+                continue
+            if not s.subscription:
+                continue
+            # Include trial: payment_status may be "unpaid" until first charge
+            paid_session = s
+            break
 
         if paid_session:
             _activate_pro_from_session(request.user, paid_session)
             return JsonResponse({'success': True, 'message': '✅ Pro plan activated! Refresh the page.'})
         else:
-            # Try by customer email
             if request.user.email:
                 customers = stripe.Customer.list(email=request.user.email, limit=1)
                 if customers.data:
                     cust = customers.data[0]
-                    subs = stripe.Subscription.list(customer=cust.id, status='active', limit=1)
-                    if subs.data:
-                        stripe_sub = subs.data[0]
-                        sub.plan                   = Subscription.PLAN_PRO
-                        sub.status                 = Subscription.STATUS_ACTIVE
-                        sub.stripe_customer_id     = cust.id
-                        sub.stripe_subscription_id = stripe_sub.id
-                        sub.started_at             = timezone.now()
-                        sub.expires_at             = timezone.now() + __import__('datetime').timedelta(days=30)
-                        sub.save()
+                    subs = stripe.Subscription.list(customer=cust.id, limit=5)
+                    stripe_sub = None
+                    for cand in subs.data:
+                        if getattr(cand, 'status', None) in ('active', 'trialing'):
+                            stripe_sub = cand
+                            break
+                    if stripe_sub:
+                        activate_pro_from_stripe(
+                            request.user,
+                            cust.id,
+                            stripe_sub.id,
+                        )
                         return JsonResponse({'success': True, 'message': '✅ Pro plan activated! Refresh the page.'})
 
             return JsonResponse({

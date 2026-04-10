@@ -27,9 +27,52 @@ from .ai_service import (
     stream_codegen_coach,
     summarize_recent_messages,
 )
-from .models import DailyMessageCount, Message, Notification, Room, Subscription
+from .models import DailyAiUsage, DailyMessageCount, Message, Notification, Room, Subscription
 
 logger = logging.getLogger(__name__)
+
+
+def _ai_quota_exceeded_response(limit: int, used: int) -> JsonResponse:
+    return JsonResponse(
+        {
+            "error": "ai_quota_exceeded",
+            "message": (
+                f"You've used all {limit} free AI requests for today. "
+                "Upgrade to Pro for unlimited AI chat and messaging."
+            ),
+            "upgrade_url": "/subscribe/",
+            "limit": limit,
+            "used": used,
+        },
+        status=403,
+    )
+
+
+def enforce_ai_quota(user):
+    """
+    Pro: unlimited. Free: FREE_AI_USES_PER_DAY per calendar day.
+    Returns None if the request may proceed, or a JsonResponse to return to the client.
+    """
+    sub, _ = Subscription.objects.get_or_create(user=user)
+    if sub.is_pro:
+        return None
+    lim = getattr(settings, "FREE_AI_USES_PER_DAY", 10)
+    today = timezone.now().date()
+    daily, _ = DailyAiUsage.objects.get_or_create(user=user, date=today)
+    if daily.count >= lim:
+        return _ai_quota_exceeded_response(lim, daily.count)
+    return None
+
+
+def record_ai_use(user):
+    """Increment daily AI counter (no-op for Pro). Call only after a successful AI call."""
+    sub, _ = Subscription.objects.get_or_create(user=user)
+    if sub.is_pro:
+        return
+    today = timezone.now().date()
+    daily, _ = DailyAiUsage.objects.get_or_create(user=user, date=today)
+    daily.count += 1
+    daily.save()
 
 
 def _parse_json(request):
@@ -270,9 +313,13 @@ def ai_assistant(request):
     message = data.get("message") or ""
     if not isinstance(history, list):
         return JsonResponse({"error": "history must be a list."}, status=400)
+    denied = enforce_ai_quota(request.user)
+    if denied:
+        return denied
     reply, err = assistant_reply(history, message)
     if err:
         return JsonResponse({"error": err}, status=400)
+    record_ai_use(request.user)
     return JsonResponse({"reply": reply})
 
 
@@ -305,9 +352,13 @@ def ai_transcript(request, room_id):
             bits.append(f"{who}: {t[:200]}")
         room_summary = "\n".join(bits)
 
+    denied = enforce_ai_quota(request.user)
+    if denied:
+        return denied
     lines, err = generate_transcript_json(scenario, room_summary, num_turns)
     if err:
         return JsonResponse({"error": err}, status=400)
+    record_ai_use(request.user)
     return JsonResponse({"lines": lines})
 
 
@@ -388,9 +439,13 @@ def ai_summarize_room(request, room_id):
     lines = []
     for m in reversed(list(recent)):
         lines.append(f"{m.sender.username}: {(m.text or '').strip()}")
+    denied = enforce_ai_quota(request.user)
+    if denied:
+        return denied
     summary, err = summarize_recent_messages(lines)
     if err:
         return JsonResponse({"error": err}, status=400)
+    record_ai_use(request.user)
     return JsonResponse({"summary": summary})
 
 
@@ -417,6 +472,11 @@ def ai_code_project_chat_stream(request):
     last = messages[-1]
     if not isinstance(last, dict) or last.get("role") != "user":
         return JsonResponse({"error": "Last message must be from the user."}, status=400)
+
+    denied = enforce_ai_quota(request.user)
+    if denied:
+        return denied
+    record_ai_use(request.user)
 
     def event_stream():
         try:
@@ -453,6 +513,10 @@ def ai_code_project_generate(request):
 
     messages = data.get("messages")
     files = data.get("files")
+
+    denied = enforce_ai_quota(request.user)
+    if denied:
+        return denied
 
     if isinstance(messages, list) and len(messages) > 0:
         if isinstance(files, list) and len(files) > 0:
@@ -501,6 +565,8 @@ def ai_code_project_generate(request):
     files_out, serr = sanitize_code_files_for_download(files_in)
     if serr:
         return JsonResponse({"error": serr}, status=400)
+
+    record_ai_use(request.user)
 
     project_name = str(raw.get("project_name") or "generated-project").strip()[:200]
     summary = str(raw.get("summary") or "").strip()[:500]

@@ -216,11 +216,15 @@ STRIPE_PUBLIC_KEY     = os.getenv('STRIPE_PUBLIC_KEY', '')
 STRIPE_SECRET_KEY     = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 SUBSCRIPTION_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "")
-SUBSCRIPTION_DISPLAY_PRICE = os.getenv("SUBSCRIPTION_DISPLAY_PRICE", "₹2")  # shown in UI
+# Shown in UI (Stripe recurring amount must match your Price in the dashboard).
+SUBSCRIPTION_DISPLAY_PRICE = os.getenv("SUBSCRIPTION_DISPLAY_PRICE", "₹309")
+# >0 adds a Stripe trial (checkout shows ₹0 “due today” until the trial ends). Set 0 to charge immediately.
 SUBSCRIPTION_TRIAL_DAYS = int(os.getenv("SUBSCRIPTION_TRIAL_DAYS", "0"))
 
 # ── Chat limits ───────────────────────────────────────────────────────────────
 FREE_MESSAGES_PER_DAY = 30
+# Free users: AI assistant, room AI, code coach, etc. Pro = unlimited.
+FREE_AI_USES_PER_DAY = int(os.getenv("FREE_AI_USES_PER_DAY", "10"))
 MAX_IMAGE_SIZE_MB     = 10
 MAX_VIDEO_SIZE_MB     = 100
 MAX_DOC_SIZE_MB       = 25

@@ -104,7 +104,7 @@
     <div class="sub-header">
         <div style="font-size:52px;margin-bottom:12px;">⚡</div>
         <h1>Upgrade to Pro</h1>
-        <p>Unlock unlimited messaging and all premium features</p>
+        <p>Unlimited messaging, unlimited AI chat &amp; AI messaging, and all premium features</p>
     </div>
 
     <!-- Quota status -->
@@ -114,13 +114,16 @@
             {% if is_pro %}
                 <strong>You're on Pro Plan!</strong>
                 <div style="font-size:13px;color:var(--text-secondary);margin-top:3px;">
-                    Unlimited messages · All features unlocked
+                    Unlimited messages · Unlimited AI (assistant, scripts, summaries, code coach)
                     {% if subscription.expires_at %}
                     · Renews {{ subscription.expires_at|date:"d M Y" }}
                     {% endif %}
                 </div>
             {% else %}
                 <strong>Free Plan — {{ remaining }}/{{ free_limit }} messages left today</strong>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;">
+                    AI: {{ ai_remaining }}/{{ free_ai_limit }} requests left today (resets daily)
+                </div>
                 <div class="progress" style="margin-top:8px;">
                     <div class="progress-fill" style="width:{% widthratio remaining free_limit 100 %}%;"></div>
                 </div>
@@ -136,8 +139,10 @@
             <div class="plan-price">₹0<span>/mo</span></div>
             <div class="plan-features">
                 <div class="feature"><span class="check">✓</span> {{ free_limit }} messages/day</div>
+                <div class="feature"><span class="check">✓</span> {{ free_ai_limit }} AI requests/day (chat, scripts, summaries, coach)</div>
                 <div class="feature"><span class="check">✓</span> Image sharing</div>
                 <div class="feature"><span class="check">✓</span> Emoji &amp; reactions</div>
+                <div class="feature"><span class="cross">✗</span> <span style="color:var(--text-muted)">Unlimited AI</span></div>
                 <div class="feature"><span class="cross">✗</span> <span style="color:var(--text-muted)">Video sharing</span></div>
                 <div class="feature"><span class="cross">✗</span> <span style="color:var(--text-muted)">Document sharing</span></div>
                 <div class="feature"><span class="cross">✗</span> <span style="color:var(--text-muted)">Priority support</span></div>
@@ -154,6 +159,8 @@
             <div class="plan-price">{{ subscription_price }}<span>/mo</span></div>
             <div class="plan-features">
                 <div class="feature"><span class="check">✓</span> Unlimited messages</div>
+                <div class="feature"><span class="check">✓</span> Unlimited AI chat (in-room assistant)</div>
+                <div class="feature"><span class="check">✓</span> Unlimited AI messaging (scripts, summaries, code coach)</div>
                 <div class="feature"><span class="check">✓</span> Images up to 10 MB</div>
                 <div class="feature"><span class="check">✓</span> Videos up to 100 MB</div>
                 <div class="feature"><span class="check">✓</span> Docs, PDFs, Spreadsheets</div>
@@ -166,7 +173,7 @@
                     <span style="font-size:24px;">✅</span>
                     <div>
                         <div style="font-weight:600;color:var(--accent);">Pro is Active</div>
-                        <div style="font-size:12px;color:var(--text-secondary);">Enjoy unlimited messaging!</div>
+                        <div style="font-size:12px;color:var(--text-secondary);">Enjoy unlimited messaging and AI!</div>
                     </div>
                 </div>
                 {% if subscription.stripe_subscription_id %}
@@ -180,6 +187,11 @@
                     </button>
                 </div>
                 <div class="upgrade-note">Secure payment via Stripe · Cancel anytime</div>
+                {% if subscription_trial_days %}
+                <div class="upgrade-note" style="margin-top:10px;max-width:340px;margin-left:auto;margin-right:auto;">
+                    If checkout shows <strong>₹0 due today</strong>, you’re starting a <strong>{{ subscription_trial_days }}-day trial</strong> — Pro unlocks immediately; billing begins when the trial ends.
+                </div>
+                {% endif %}
                 <!-- Already paid but plan didn't activate? -->
                 <div id="already-paid-wrap" style="margin-top:10px;text-align:center;">
                     <button onclick="alreadyPaid()" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;font-family:'Sora',sans-serif;text-decoration:underline;">
@@ -196,11 +208,11 @@
         <h2>Frequently Asked Questions</h2>
         <div class="faq-item" onclick="this.classList.toggle('open')">
             <div class="faq-q">How does the free plan work? <span>+</span></div>
-            <div class="faq-a">The free plan gives you {{ free_limit }} messages per day. The counter resets every day at midnight IST.</div>
+            <div class="faq-a">The free plan gives you {{ free_limit }} messages and {{ free_ai_limit }} AI requests per day (assistant, generated scripts, summaries, and the floating code coach). Counters reset daily.</div>
         </div>
         <div class="faq-item" onclick="this.classList.toggle('open')">
             <div class="faq-q">What happens after I pay {{ subscription_price }}? <span>+</span></div>
-            <div class="faq-a">Your Pro plan activates immediately after payment. You get unlimited messages, video &amp; document sharing right away.</div>
+            <div class="faq-a">Your Pro plan activates immediately after payment. You get unlimited messages, unlimited AI, and video &amp; document sharing right away.</div>
         </div>
         <div class="faq-item" onclick="this.classList.toggle('open')">
             <div class="faq-q">Can I cancel anytime? <span>+</span></div>

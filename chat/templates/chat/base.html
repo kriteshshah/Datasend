@@ -641,7 +641,8 @@
     <div id="ai-project-endpoints" hidden
          data-stream-url="{% url 'ai_code_project_chat_stream' %}"
          data-generate-url="{% url 'ai_code_project_generate' %}"
-         data-zip-url="{% url 'ai_code_project_zip' %}"></div>
+         data-zip-url="{% url 'ai_code_project_zip' %}"
+         data-subscribe-url="{% url 'subscription' %}"></div>
     <div class="ai-project-panel" id="ai-project-panel" aria-hidden="true">
         <div class="ai-project-panel-header">
             <div>
@@ -1200,7 +1201,16 @@
                     });
                     if (!res.ok) {
                         const err = await res.json().catch(() => ({}));
-                        throw new Error(err.error || res.statusText);
+                        if (err.error === 'ai_quota_exceeded') {
+                            const su = endpoints.getAttribute('data-subscribe-url') || '/subscribe/';
+                            showToast(
+                                'AI limit reached',
+                                (err.message || 'Daily free AI limit reached.') + ' Upgrade to Pro for unlimited AI: ' + su,
+                                'warning',
+                                7000,
+                            );
+                        }
+                        throw new Error(err.message || err.error || res.statusText);
                     }
                     await readSseStream(res, (c) => {
                         full += c;
@@ -1266,7 +1276,17 @@
                         return;
                     }
                     if (!res.ok) {
-                        showToast('Generate', data.error || 'Request failed', 'error');
+                        if (data.error === 'ai_quota_exceeded') {
+                            const su = endpoints.getAttribute('data-subscribe-url') || '/subscribe/';
+                            showToast(
+                                'AI limit reached',
+                                (data.message || 'Daily free AI limit reached.') + ' Upgrade: ' + su,
+                                'warning',
+                                7000,
+                            );
+                        } else {
+                            showToast('Generate', data.error || 'Request failed', 'error');
+                        }
                         return;
                     }
                     outputTruncated = false;

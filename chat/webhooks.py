@@ -14,6 +14,7 @@ from django.utils import timezone
 import datetime
 
 from .models import Subscription, Notification
+from .subscription_service import activate_pro_from_stripe
 
 
 @csrf_exempt
@@ -83,23 +84,9 @@ def _handle_checkout_completed(session):
         return
 
     try:
-        user = User.objects.get(id=client_ref)
-        sub, _ = Subscription.objects.get_or_create(user=user)
-        sub.plan                   = Subscription.PLAN_PRO
-        sub.status                 = Subscription.STATUS_ACTIVE
-        sub.stripe_customer_id     = customer_id or ''
-        sub.stripe_subscription_id = subscription_id or ''
-        sub.started_at             = timezone.now()
-        sub.expires_at             = timezone.now() + datetime.timedelta(days=30)
-        sub.save()
-
-        Notification.objects.get_or_create(
-            recipient=user,
-            notification_type=Notification.TYPE_SUBSCRIPTION,
-            title='🎉 Welcome to Pro!',
-            defaults={'body': 'You now have unlimited messaging and all premium features unlocked.'}
-        )
-    except User.DoesNotExist:
+        user = User.objects.get(id=int(client_ref))
+        activate_pro_from_stripe(user, customer_id or '', subscription_id or '')
+    except (User.DoesNotExist, ValueError, TypeError):
         pass
 
 
@@ -111,15 +98,16 @@ def _handle_subscription_updated(stripe_sub):
 
     try:
         sub = Subscription.objects.get(stripe_customer_id=customer_id)
-        if status == 'active':
+        # trialing = free trial period; user should still have Pro access
+        if status in ('active', 'trialing'):
             sub.status = Subscription.STATUS_ACTIVE
             sub.plan = Subscription.PLAN_PRO
-        elif status in ('canceled', 'unpaid', 'past_due'):
+        elif status in ('canceled', 'unpaid', 'past_due', 'incomplete_expired'):
             sub.status = Subscription.STATUS_CANCELLED
 
         if current_period_end:
             sub.expires_at = datetime.datetime.fromtimestamp(
-                current_period_end, tz=timezone.utc
+                int(current_period_end), tz=datetime.timezone.utc
             )
         sub.save()
     except Subscription.DoesNotExist:
@@ -168,7 +156,13 @@ def _handle_payment_succeeded(invoice):
         sub = Subscription.objects.get(stripe_customer_id=customer_id)
         sub.plan = Subscription.PLAN_PRO
         sub.status = Subscription.STATUS_ACTIVE
-        sub.expires_at = timezone.now() + datetime.timedelta(days=30)
+        pe = invoice.get('period_end')
+        if pe:
+            sub.expires_at = datetime.datetime.fromtimestamp(
+                int(pe), tz=datetime.timezone.utc
+            )
+        else:
+            sub.expires_at = timezone.now() + datetime.timedelta(days=32)
         sub.save()
     except Subscription.DoesNotExist:
         pass

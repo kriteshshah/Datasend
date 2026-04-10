@@ -102,6 +102,20 @@ class DailyMessageCount(models.Model):
         return f"{self.user.username} - {self.date}: {self.count}"
 
 
+class DailyAiUsage(models.Model):
+    """Counts AI API uses per user per day (assistant, summaries, code coach, etc.). Pro users are not limited."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='daily_ai_usage')
+    date = models.DateField(default=timezone.now)
+    count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ('user', 'date')
+
+    def __str__(self):
+        return f"{self.user.username} AI {self.date}: {self.count}"
+
+
 class Room(models.Model):
     ROOM_DIRECT = 'direct'
     ROOM_GROUP = 'group'
