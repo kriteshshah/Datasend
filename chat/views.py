@@ -5,6 +5,7 @@ Views for the chat application
 import json
 import os
 import logging
+from datetime import timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
@@ -136,6 +137,10 @@ def room_view(request, room_id):
         room=room, is_deleted=False
     ).select_related('sender', 'sender__profile', 'reply_to', 'reply_to__sender').order_by('-created_at')[:50]
     messages = list(reversed(messages))
+    delete_window = timedelta(minutes=10)
+    now = timezone.now()
+    for msg in messages:
+        msg.can_delete = (msg.sender_id == request.user.id) and (now <= (msg.created_at + delete_window))
     RoomMembership.objects.filter(user=request.user, room=room).update(last_read_at=timezone.now())
     sub, _   = Subscription.objects.get_or_create(user=request.user)
     today    = timezone.now().date()
@@ -291,6 +296,7 @@ def upload_file(request, room_id):
         'sender_avatar': avatar,
         'sender_initials': initials,
         'timestamp': msg.created_at.strftime('%H:%M'),
+        'can_delete': True,
     })
     for member in room.members.exclude(id=request.user.id).filter(profile__is_online=False):
         Notification.objects.create(
@@ -299,7 +305,26 @@ def upload_file(request, room_id):
             title=f"{request.user.username} sent a {msg_type}",
             body=file.name, room=room, message=msg,
         )
-    return JsonResponse({'success': True, 'message_id': str(msg.id), 'file_url': file_url})
+    return JsonResponse({
+        'success': True,
+        'message': {
+            'message_id': str(msg.id),
+            'message_type': msg_type,
+            'file_url': file_url,
+            'file_name': file.name,
+            'file_size': msg.get_file_size_display(),
+            'mime_type': content_type,
+            'caption': msg.text,
+            'doc_icon': msg.get_doc_icon(),
+            'sender_id': request.user.id,
+            'sender_username': request.user.username,
+            'sender_avatar': avatar,
+            'sender_initials': initials,
+            'timestamp': msg.created_at.strftime('%H:%M'),
+            'can_delete': True,
+            'reply_to': None,
+        },
+    })
 
 
 # ─── API Endpoints ────────────────────────────────────────────────────────────
@@ -405,6 +430,8 @@ def get_messages(request, room_id):
         "sender", "sender__profile", "reply_to", "reply_to__sender"
     ).order_by("-created_at")[:20]
     data = []
+    delete_window = timedelta(minutes=10)
+    now = timezone.now()
     for msg in reversed(list(messages)):
         try:
             avatar   = msg.sender.profile.avatar.url if msg.sender.profile.avatar else None
@@ -417,6 +444,7 @@ def get_messages(request, room_id):
             'sender_avatar': avatar, 'sender_initials': initials,
             'timestamp': msg.created_at.strftime('%H:%M'),
             'is_own': msg.sender == request.user,
+            'can_delete': (msg.sender_id == request.user.id) and (now <= (msg.created_at + delete_window)),
         }
         if msg.message_type == Message.TYPE_GIF and msg.gif_url:
             d["type"] = "gif"

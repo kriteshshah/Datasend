@@ -7,6 +7,7 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils import timezone
+from datetime import timedelta
 from django.contrib.auth.models import User
 import uuid
 
@@ -135,6 +136,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'sender_initials': message['sender_initials'],
                 'reply_to': message.get('reply_to'),
                 'timestamp': message['timestamp'],
+                'can_delete': message.get('can_delete', True),
                 'remaining_messages': remaining - 1,
             }
         )
@@ -215,8 +217,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         msg_id = data.get('message_id')
         if not msg_id:
             return
-        success = await self.delete_message(msg_id)
-        if success:
+        result = await self.delete_message(msg_id)
+        if result.get('success'):
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
@@ -225,6 +227,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'deleted_by': self.user.username,
                 }
             )
+        else:
+            await self.send(text_data=json.dumps({
+                'type': 'delete_failed',
+                'message_id': msg_id,
+                'error': result.get('error', 'Unable to delete this message.'),
+            }))
 
     async def handle_reaction(self, data):
         msg_id = data.get('message_id')
@@ -377,6 +385,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'timestamp': msg.created_at.strftime('%H:%M'),
             'sender_avatar': avatar,
             'sender_initials': initials,
+            'can_delete': True,
         }
         if reply_to:
             preview = reply_to.text[:100] if reply_to.text else ''
@@ -430,6 +439,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'timestamp': msg.created_at.strftime('%H:%M'),
             'sender_avatar': avatar,
             'sender_initials': initials,
+            'can_delete': True,
         }
         if reply_to:
             preview = reply_to.text[:100] if reply_to.text else ''
@@ -460,12 +470,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         from .models import Message
         try:
             msg = Message.objects.get(id=message_id, sender=self.user)
+            if msg.is_deleted:
+                return {'success': False, 'error': 'Message is already deleted.'}
+
+            delete_deadline = msg.created_at + timedelta(minutes=10)
+            if timezone.now() > delete_deadline:
+                return {'success': False, 'error': 'You can only delete a message within 10 minutes.'}
+
             msg.is_deleted = True
             msg.text = 'This message was deleted'
             msg.save()
-            return True
+            return {'success': True}
         except Message.DoesNotExist:
-            return False
+            return {'success': False, 'error': 'Message not found or not owned by you.'}
 
     @database_sync_to_async
     def toggle_reaction(self, message_id, emoji):

@@ -45,7 +45,7 @@
                     <span class="action-emoji" onclick="sendReaction('{{ message.id }}','{{ emoji }}')">{{ emoji }}</span>
                     {% endfor %}
                     <span class="action-emoji" onclick="setReply('{{ message.id }}','{{ message.sender.username }}','🎞️ GIF')">↩</span>
-                    {% if message.sender == user %}
+                    {% if message.sender == user and message.can_delete %}
                     <span class="action-emoji" onclick="deleteMessage('{{ message.id }}')">🗑️</span>
                     {% endif %}
                 </div>
@@ -127,7 +127,7 @@
                     <span class="action-emoji" onclick="sendReaction('{{ message.id }}','{{ emoji }}')">{{ emoji }}</span>
                     {% endfor %}
                     <span class="action-emoji" onclick="setReply('{{ message.id }}','{{ message.sender.username }}','{{ message.text|truncatechars:60|escapejs }}')">↩</span>
-                    {% if message.sender == user %}
+                    {% if message.sender == user and message.can_delete %}
                     <span class="action-emoji" onclick="deleteMessage('{{ message.id }}')">🗑️</span>
                     {% endif %}
                 </div>

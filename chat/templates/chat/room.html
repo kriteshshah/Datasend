@@ -70,13 +70,13 @@
 .bubble.emoji-only .msg-time { color:var(--text-muted); font-size:11px; }
 
 /* Image bubble */
-.bubble.image-bubble { padding:4px; overflow:hidden; max-width:min(280px,100%); box-sizing:border-box; }
+.bubble.image-bubble { padding:4px; overflow:visible; max-width:min(280px,100%); box-sizing:border-box; }
 .bubble.image-bubble img { width:100%; max-width:100%; border-radius:14px; display:block; cursor:pointer; }
 .bubble.image-bubble img.gif-media { object-fit:contain; max-height:min(320px,70vh); background:var(--bg-tertiary); }
 .img-caption { padding:6px 10px 4px; font-size:13px; }
 
 /* Video bubble */
-.bubble.video-bubble { padding:4px; overflow:hidden; max-width:min(320px,100%); box-sizing:border-box; }
+.bubble.video-bubble { padding:4px; overflow:visible; max-width:min(320px,100%); box-sizing:border-box; }
 .bubble.video-bubble video { width:100%; max-width:100%; border-radius:14px; display:block; max-height:240px; }
 
 /* Doc bubble */
@@ -108,8 +108,8 @@
 .reply-text { font-size:12px; color:var(--text-secondary); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* Message hover actions */
-.msg-actions { opacity:0; position:absolute; top:-32px; right:0; display:flex; gap:4px; background:var(--surface-2); border:1px solid var(--border); border-radius:20px; padding:4px 8px; transition:opacity 0.2s; z-index:10; }
-.msg-group.own .msg-actions { right:auto; left:0; }
+.msg-actions { opacity:0; position:absolute; top:-32px; left:0; display:flex; gap:4px; background:var(--surface-2); border:1px solid var(--border); border-radius:20px; padding:4px 8px; transition:opacity 0.2s; z-index:10; }
+.msg-group.own .msg-actions { left:auto; right:0; }
 .bubble:hover .msg-actions { opacity:1; }
 .action-emoji { cursor:pointer; font-size:16px; width:26px; height:26px; display:flex; align-items:center; justify-content:center; border-radius:50%; transition:background 0.15s; }
 .action-emoji:hover { background:var(--bg-hover); }
@@ -534,7 +534,7 @@
                         <div class="msg-actions">
                             {% for e in "👍❤️😂😮😢" %}<span class="action-emoji" onclick="sendReaction('{{ msg.id }}','{{ e }}')">{{ e }}</span>{% endfor %}
                             <span class="action-emoji" onclick="setReply('{{ msg.id }}','{{ msg.sender.username }}','🎞️ GIF')">↩</span>
-                            {% if msg.sender == request.user %}<span class="action-emoji" onclick="deleteMessage('{{ msg.id }}')">🗑️</span>{% endif %}
+                            {% if msg.sender == request.user and msg.can_delete %}<span class="action-emoji" onclick="deleteMessage('{{ msg.id }}')">🗑️</span>{% endif %}
                         </div>
                     </div>
 
@@ -546,6 +546,7 @@
                         <div class="msg-actions">
                             {% for e in "👍❤️😂😮😢" %}<span class="action-emoji" onclick="sendReaction('{{ msg.id }}','{{ e }}')">{{ e }}</span>{% endfor %}
                             <span class="action-emoji" onclick="setReply('{{ msg.id }}','{{ msg.sender.username }}','{{ msg.text|default:"📷 Photo" }}')">↩</span>
+                            {% if msg.sender == request.user and msg.can_delete %}<span class="action-emoji" onclick="deleteMessage('{{ msg.id }}')">🗑️</span>{% endif %}
                         </div>
                     </div>
 
@@ -556,6 +557,8 @@
                         <div class="msg-time" style="padding:0 10px 6px;">{{ msg.created_at|time:"H:i" }}</div>
                         <div class="msg-actions">
                             {% for e in "👍❤️😂😮😢" %}<span class="action-emoji" onclick="sendReaction('{{ msg.id }}','{{ e }}')">{{ e }}</span>{% endfor %}
+                            <span class="action-emoji" onclick="setReply('{{ msg.id }}','{{ msg.sender.username }}','🎥 Video')">↩</span>
+                            {% if msg.sender == request.user and msg.can_delete %}<span class="action-emoji" onclick="deleteMessage('{{ msg.id }}')">🗑️</span>{% endif %}
                         </div>
                     </div>
 
@@ -569,6 +572,8 @@
                         <a href="{{ msg.document.url }}" download class="doc-dl">⬇️</a>
                         <div class="msg-actions">
                             {% for e in "👍❤️😂😮😢" %}<span class="action-emoji" onclick="sendReaction('{{ msg.id }}','{{ e }}')">{{ e }}</span>{% endfor %}
+                            <span class="action-emoji" onclick="setReply('{{ msg.id }}','{{ msg.sender.username }}','📎 {{ msg.file_name|escapejs }}')">↩</span>
+                            {% if msg.sender == request.user and msg.can_delete %}<span class="action-emoji" onclick="deleteMessage('{{ msg.id }}')">🗑️</span>{% endif %}
                         </div>
                     </div>
 
@@ -579,7 +584,7 @@
                         <div class="msg-actions">
                             {% for e in "👍❤️😂😮😢" %}<span class="action-emoji" onclick="sendReaction('{{ msg.id }}','{{ e }}')">{{ e }}</span>{% endfor %}
                             <span class="action-emoji" onclick="setReply('{{ msg.id }}','{{ msg.sender.username }}','{{ msg.text|truncatechars:60 }}')">↩</span>
-                            {% if msg.sender == request.user %}<span class="action-emoji" onclick="deleteMessage('{{ msg.id }}')">🗑️</span>{% endif %}
+                            {% if msg.sender == request.user and msg.can_delete %}<span class="action-emoji" onclick="deleteMessage('{{ msg.id }}')">🗑️</span>{% endif %}
                         </div>
                     </div>
                     {% endif %}
@@ -1002,6 +1007,9 @@ function handleWSMessage(e) {
         case 'message_deleted':
             handleMessageDeleted(data);
             break;
+        case 'delete_failed':
+            showToast('Delete failed', data.error || 'You cannot delete this message now.', 'warning');
+            break;
         case 'reaction_update':
             updateReactions(data);
             break;
@@ -1238,6 +1246,7 @@ function getAvatarHTML(data, size='sm') {
 
 function appendMessage(data) {
     const isOwn = data.sender_id === MY_USER_ID;
+    const canDelete = isOwn && data.can_delete !== false;
     const wrap = document.getElementById('messages-wrap');
 
     let replyHTML = '';
@@ -1266,7 +1275,7 @@ function appendMessage(data) {
                 <div class="msg-actions">
                     ${'👍❤️😂😮😢'.split('').map(e=>`<span class="action-emoji" onclick="sendReaction('${data.message_id}','${e}')">${e}</span>`).join('')}
                     <span class="action-emoji" onclick="setReply('${data.message_id}','${data.sender_username}','${escapeAttr(data.text)}')">↩</span>
-                    ${isOwn ? `<span class="action-emoji" onclick="deleteMessage('${data.message_id}')">🗑️</span>` : ''}
+                    ${canDelete ? `<span class="action-emoji" onclick="deleteMessage('${data.message_id}')">🗑️</span>` : ''}
                 </div>
             </div>
         </div>
@@ -1288,7 +1297,9 @@ function replyHTMLFromData(rt) {
 }
 
 function appendFileMessage(data) {
+    if (document.getElementById(`msg-${data.message_id}`)) return;
     const isOwn = data.sender_id === MY_USER_ID;
+    const canDelete = isOwn && data.can_delete !== false;
     const wrap = document.getElementById('messages-wrap');
     const replyHTML = replyHTMLFromData(data.reply_to);
 
@@ -1303,7 +1314,7 @@ function appendFileMessage(data) {
                 <div class="msg-actions">
                     ${'👍❤️😂😮😢'.split('').map(e=>`<span class="action-emoji" onclick="sendReaction('${data.message_id}','${e}')">${e}</span>`).join('')}
                     <span class="action-emoji" onclick="setReply('${data.message_id}','${escapeAttr(data.sender_username)}','🎞️ GIF')">↩</span>
-                    ${isOwn ? `<span class="action-emoji" onclick="deleteMessage('${data.message_id}')">🗑️</span>` : ''}
+                    ${canDelete ? `<span class="action-emoji" onclick="deleteMessage('${data.message_id}')">🗑️</span>` : ''}
                 </div>
             </div>`;
     } else if (data.message_type === 'image') {
@@ -1315,7 +1326,11 @@ function appendFileMessage(data) {
                 <img src="${fu}" alt="${escapeHTML(data.file_name)}"${gifAttr} onclick="openLightbox('img','${flb}')" loading="lazy">
                 ${data.caption ? `<div class="img-caption">${escapeHTML(data.caption)}</div>` : ''}
                 <div class="msg-time">${data.timestamp}</div>
-                <div class="msg-actions">${'👍❤️😂😮😢'.split('').map(e=>`<span class="action-emoji" onclick="sendReaction('${data.message_id}','${e}')">${e}</span>`).join('')}</div>
+                <div class="msg-actions">
+                    ${'👍❤️😂😮😢'.split('').map(e=>`<span class="action-emoji" onclick="sendReaction('${data.message_id}','${e}')">${e}</span>`).join('')}
+                    <span class="action-emoji" onclick="setReply('${data.message_id}','${escapeAttr(data.sender_username)}','📷 Photo')">↩</span>
+                    ${canDelete ? `<span class="action-emoji" onclick="deleteMessage('${data.message_id}')">🗑️</span>` : ''}
+                </div>
             </div>`;
     } else if (data.message_type === 'video') {
         const vu = escapeHTML(data.file_url);
@@ -1323,6 +1338,11 @@ function appendFileMessage(data) {
             <div class="bubble video-bubble">
                 <video src="${vu}" controls preload="metadata"></video>
                 <div class="msg-time" style="padding:4px 10px 6px;">${data.timestamp}</div>
+                <div class="msg-actions">
+                    ${'👍❤️😂😮😢'.split('').map(e=>`<span class="action-emoji" onclick="sendReaction('${data.message_id}','${e}')">${e}</span>`).join('')}
+                    <span class="action-emoji" onclick="setReply('${data.message_id}','${escapeAttr(data.sender_username)}','🎥 Video')">↩</span>
+                    ${canDelete ? `<span class="action-emoji" onclick="deleteMessage('${data.message_id}')">🗑️</span>` : ''}
+                </div>
             </div>`;
     } else {
         const du = escapeHTML(data.file_url);
@@ -1331,6 +1351,11 @@ function appendFileMessage(data) {
                 <div class="doc-icon-wrap">${data.doc_icon || '📎'}</div>
                 <div class="doc-info"><div class="doc-name">${escapeHTML(data.file_name)}</div><div class="doc-size">${escapeHTML(data.file_size || '')}</div></div>
                 <a href="${du}" download class="doc-dl">⬇️</a>
+                <div class="msg-actions">
+                    ${'👍❤️😂😮😢'.split('').map(e=>`<span class="action-emoji" onclick="sendReaction('${data.message_id}','${e}')">${e}</span>`).join('')}
+                    <span class="action-emoji" onclick="setReply('${data.message_id}','${escapeAttr(data.sender_username)}','📎 ${escapeAttr(data.file_name || 'File')}')">↩</span>
+                    ${canDelete ? `<span class="action-emoji" onclick="deleteMessage('${data.message_id}')">🗑️</span>` : ''}
+                </div>
             </div>`;
     }
 
@@ -1427,6 +1452,9 @@ async function uploadFile() {
                 showToast('Upload failed', data.error || 'Unknown error', 'error');
             }
         } else {
+            if (data.message) {
+                appendFileMessage(data.message);
+            }
             clearFile();
             document.getElementById('msg-input').value = '';
         }
@@ -1594,12 +1622,13 @@ function buildMessageEl(msg) {
     div.dataset.id = msg.id;
 
     const replyHTML = replyHTMLFromData(msg.reply_to);
+    const canDelete = !!msg.is_own && msg.can_delete !== false;
 
     let content = '';
     if (msg.type === 'gif' && msg.gif_url) {
         const src = escapeHTML(msg.gif_url);
         const lb = escapeAttr(msg.gif_url);
-        const del = msg.is_own
+        const del = canDelete
             ? `<span class="action-emoji" onclick="deleteMessage('${msg.id}')">🗑️</span>`
             : '';
         content = `<div class="bubble image-bubble" style="padding:4px;"><img src="${src}" alt="GIF" class="gif-media" onclick="openLightbox('img','${lb}')" loading="lazy"><div class="msg-time">${msg.timestamp}</div><div class="msg-actions">${'👍❤️😂😮😢'.split('').map(e=>`<span class="action-emoji" onclick="sendReaction('${msg.id}','${e}')">${e}</span>`).join('')}<span class="action-emoji" onclick="setReply('${msg.id}','${escapeAttr(msg.sender_username)}','🎞️ GIF')">↩</span>${del}</div></div>`;
@@ -1607,13 +1636,14 @@ function buildMessageEl(msg) {
         const gCls = isGifMedia(msg.mime_type, msg.file_name) ? ' class="gif-media"' : '';
         const fu = escapeHTML(msg.file_url);
         const flb = escapeAttr(msg.file_url);
-        content = `<div class="bubble image-bubble"><img src="${fu}"${gCls} onclick="openLightbox('img','${flb}')" loading="lazy"><div class="msg-time">${msg.timestamp}</div></div>`;
+        const caption = msg.text ? `<div class="img-caption">${escapeHTML(msg.text)}</div>` : '';
+        content = `<div class="bubble image-bubble"><img src="${fu}"${gCls} onclick="openLightbox('img','${flb}')" loading="lazy">${caption}<div class="msg-time">${msg.timestamp}</div><div class="msg-actions">${'👍❤️😂😮😢'.split('').map(e=>`<span class="action-emoji" onclick="sendReaction('${msg.id}','${e}')">${e}</span>`).join('')}<span class="action-emoji" onclick="setReply('${msg.id}','${escapeAttr(msg.sender_username)}','📷 Photo')">↩</span>${canDelete ? `<span class="action-emoji" onclick="deleteMessage('${msg.id}')">🗑️</span>` : ''}</div></div>`;
     } else if (msg.type === 'video') {
         const vu = escapeHTML(msg.file_url);
-        content = `<div class="bubble video-bubble"><video src="${vu}" controls preload="metadata"></video><div class="msg-time">${msg.timestamp}</div></div>`;
+        content = `<div class="bubble video-bubble"><video src="${vu}" controls preload="metadata"></video><div class="msg-time">${msg.timestamp}</div><div class="msg-actions">${'👍❤️😂😮😢'.split('').map(e=>`<span class="action-emoji" onclick="sendReaction('${msg.id}','${e}')">${e}</span>`).join('')}<span class="action-emoji" onclick="setReply('${msg.id}','${escapeAttr(msg.sender_username)}','🎥 Video')">↩</span>${canDelete ? `<span class="action-emoji" onclick="deleteMessage('${msg.id}')">🗑️</span>` : ''}</div></div>`;
     } else if (msg.type === 'doc') {
         const du = escapeHTML(msg.file_url);
-        content = `<div class="bubble doc-bubble"><div class="doc-icon-wrap">${msg.doc_icon}</div><div class="doc-info"><div class="doc-name">${escapeHTML(msg.file_name)}</div><div class="doc-size">${escapeHTML(msg.file_size || '')}</div></div><a href="${du}" download class="doc-dl">⬇️</a></div>`;
+        content = `<div class="bubble doc-bubble"><div class="doc-icon-wrap">${msg.doc_icon}</div><div class="doc-info"><div class="doc-name">${escapeHTML(msg.file_name)}</div><div class="doc-size">${escapeHTML(msg.file_size || '')}</div></div><a href="${du}" download class="doc-dl">⬇️</a><div class="msg-actions">${'👍❤️😂😮😢'.split('').map(e=>`<span class="action-emoji" onclick="sendReaction('${msg.id}','${e}')">${e}</span>`).join('')}<span class="action-emoji" onclick="setReply('${msg.id}','${escapeAttr(msg.sender_username)}','📎 ${escapeAttr(msg.file_name || 'File')}')">↩</span>${canDelete ? `<span class="action-emoji" onclick="deleteMessage('${msg.id}')">🗑️</span>` : ''}</div></div>`;
     } else {
         content = `<div class="bubble"><div class="msg-text-body">${formatMessageWithMentions(msg.text)}</div><div class="msg-time">${msg.timestamp}</div></div>`;
     }

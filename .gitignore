@@ -6,4 +6,4 @@ media/
 *local_settings.py
 .env.local
 .env.staging
-orion/settings.py
+staticfiles
