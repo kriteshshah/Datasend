@@ -46,6 +46,18 @@ if not CSRF_TRUSTED_ORIGINS:
         'https://devoted-manifestation-production.up.railway.app'
     ]
 
+# Always trust current Railway domain even when env var is set.
+_DEFAULT_RAILWAY_ORIGIN = 'https://devoted-manifestation-production.up.railway.app'
+if _DEFAULT_RAILWAY_ORIGIN not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(_DEFAULT_RAILWAY_ORIGIN)
+
+# Auto-add Railway's provided public domain when available.
+_RAILWAY_PUBLIC_DOMAIN = (os.getenv('RAILWAY_PUBLIC_DOMAIN', '') or '').strip()
+if _RAILWAY_PUBLIC_DOMAIN:
+    _railway_origin = f'https://{_RAILWAY_PUBLIC_DOMAIN}'
+    if _railway_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_railway_origin)
+
 # ── Apps ──────────────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
     'daphne',
