@@ -80,6 +80,7 @@ def register_view(request):
                         password=password,
                     )
                     if full_name:
+                        print(full_name)
                         parts = full_name.split(' ', 1)
                         user.first_name = parts[0]
                         user.last_name = parts[1] if len(parts) > 1 else ''
